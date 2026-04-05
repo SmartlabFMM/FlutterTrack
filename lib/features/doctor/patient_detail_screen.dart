@@ -1,0 +1,790 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../core/constants/app_colors.dart';
+import '../../providers/seizure_provider.dart';
+import '../../services/odoo_service.dart';
+
+class PatientDetailScreen extends ConsumerWidget {
+  final String patientId;
+  const PatientDetailScreen({super.key, required this.patientId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final name   = OdooService.patientName(patientId);
+    final detail = OdooService.patientDetail(patientId) ?? _defaultDetail(name);
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: CustomScrollView(
+          slivers: [
+            // ── Hero dossier ─────────────────────────────
+            SliverToBoxAdapter(
+              child: _PatientHero(
+                name: name,
+                detail: detail,
+                patientId: patientId,
+              ),
+            ),
+
+            // ── Corps ─────────────────────────────────────
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+
+                  // ── Infos médicales ──────────────────────
+                  _MedicalInfoCard(detail: detail),
+                  const SizedBox(height: 14),
+
+                  // ── Compliance traitement ────────────────
+                  _ComplianceCard(
+                    compliance: (detail['compliance'] as num?)?.toDouble() ?? 0.85),
+                  const SizedBox(height: 14),
+
+                  // ── Stats crises ─────────────────────────
+                  _SeizureStatsCard(patientId: patientId),
+                  const SizedBox(height: 14),
+
+                  // ── Déclencheurs ─────────────────────────
+                  _TriggersCard(
+                    triggers: List<String>.from(
+                      detail['triggers'] as List? ?? [])),
+                  const SizedBox(height: 14),
+
+                  // ── Notes cliniques ──────────────────────
+                  _ClinicalNotesCard(
+                    notes: List<Map<String, dynamic>>.from(
+                      detail['notes'] as List? ?? []),
+                    patientName: name,
+                    context: context,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── Actions ──────────────────────────────
+                  const _SectionLabel('Actions'),
+                  const SizedBox(height: 10),
+
+                  _DoctorActionTile(
+                    icon: Icons.monitor_heart_rounded,
+                    title: 'Données vitales 24h',
+                    subtitle: 'FC · Accéléromètre · GSR en temps réel',
+                    color: AppColors.primary,
+                    onTap: () => context.push('/doctor/vitals/$patientId')),
+                  _DoctorActionTile(
+                    icon: Icons.picture_as_pdf_rounded,
+                    title: 'Générer rapport PDF',
+                    subtitle: 'Export historique complet du patient',
+                    color: AppColors.teal,
+                    onTap: () => context.push('/doctor/report/$patientId')),
+                  _DoctorActionTile(
+                    icon: Icons.note_add_rounded,
+                    title: 'Ajouter note clinique',
+                    subtitle: 'Observations médicales & traitements',
+                    color: AppColors.primaryDark,
+                    onTap: () => _showNoteDialog(context, name)),
+                  _DoctorActionTile(
+                    icon: Icons.calendar_today_rounded,
+                    title: 'Planifier rendez-vous',
+                    subtitle: detail['nextRdv'] as String? ?? 'À définir',
+                    color: const Color(0xFF7C3AED),
+                    onTap: () {}),
+                  _DoctorActionTile(
+                    icon: Icons.call_rounded,
+                    title: 'Appeler le patient',
+                    subtitle: detail['phone'] as String? ?? '—',
+                    color: AppColors.tealDark,
+                    onTap: () {}),
+                ]),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Map<String, dynamic> _defaultDetail(String name) => {
+    'age': 30, 'gender': 'N/A', 'city': '—',
+    'diagnosis': 'Épilepsie généralisée',
+    'since': 'Suivi récent',
+    'treatment': '—',
+    'phone': '—',
+    'nextRdv': '—',
+    'notes': [],
+    'allergies': '—',
+    'bloodGroup': '—',
+    'weight': '—',
+    'seizureType': '—',
+    'triggers': [],
+    'compliance': 0.80,
+  };
+
+  void _showNoteDialog(BuildContext context, String patientName) {
+    final ctrl = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.cardBorder,
+                  borderRadius: BorderRadius.circular(2)))),
+              const SizedBox(height: 16),
+              Row(children: [
+                Container(
+                  width: 36, height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryPale,
+                    borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.note_add_rounded,
+                    color: AppColors.primary, size: 18)),
+                const SizedBox(width: 12),
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('Note clinique',
+                    style: TextStyle(fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary)),
+                  Text(patientName,
+                    style: const TextStyle(
+                      fontSize: 12, color: AppColors.textSecondary)),
+                ]),
+              ]),
+              const SizedBox(height: 16),
+              TextField(
+                controller: ctrl,
+                maxLines: 4,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText:
+                    'Observations, modifications de traitement, recommandations…',
+                  alignLabelWithHint: true),
+              ),
+              const SizedBox(height: 16),
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                      side: const BorderSide(color: AppColors.cardBorder),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12))),
+                    child: const Text('Annuler',
+                      style: TextStyle(color: AppColors.textSecondary)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Note clinique enregistrée'),
+                          backgroundColor: AppColors.teal,
+                          behavior: SnackBarBehavior.floating));
+                    },
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12))),
+                    child: const Text('Enregistrer'),
+                  ),
+                ),
+              ]),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Hero dossier patient ─────────────────────────────────────
+class _PatientHero extends StatelessWidget {
+  final String name, patientId;
+  final Map<String, dynamic> detail;
+  const _PatientHero({
+    required this.name, required this.detail, required this.patientId});
+
+  @override
+  Widget build(BuildContext context) {
+    final initials = name.split(' ').take(2).map((w) => w[0]).join();
+    final age      = detail['age'] as int? ?? 0;
+    final gender   = detail['gender'] as String? ?? '';
+    final city     = detail['city'] as String? ?? '';
+    final diag     = detail['diagnosis'] as String? ?? '';
+    final since    = detail['since'] as String? ?? '';
+
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: AppColors.heroGradientDoctor,
+        borderRadius: BorderRadius.only(
+          bottomLeft:  Radius.circular(32),
+          bottomRight: Radius.circular(32)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Column(children: [
+          // Back button + titre
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Row(children: [
+              GestureDetector(
+                onTap: () => context.pop(),
+                child: Container(
+                  width: 38, height: 38,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.2))),
+                  child: const Icon(Icons.arrow_back_rounded,
+                    color: Colors.white, size: 20)),
+              ),
+              const SizedBox(width: 12),
+              const Text('Dossier patient',
+                style: TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w700,
+                  color: Colors.white, fontFamily: 'Inter')),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20)),
+                child: Text('#$patientId',
+                  style: const TextStyle(
+                    fontSize: 11, fontWeight: FontWeight.w700,
+                    color: Colors.white)),
+              ),
+            ]),
+          ),
+
+          // Profil
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+            child: Row(children: [
+              // Avatar grand
+              Container(
+                width: 72, height: 72,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.3), width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.15),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4)),
+                  ],
+                ),
+                child: Center(child: Text(initials,
+                  style: const TextStyle(
+                    fontSize: 26, fontWeight: FontWeight.w800,
+                    color: Colors.white)))),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.w800,
+                      color: Colors.white)),
+                    const SizedBox(height: 4),
+                    Text('$age ans · $gender · $city',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white.withValues(alpha: 0.8))),
+                    const SizedBox(height: 8),
+                    Text(diag, style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.72),
+                      fontStyle: FontStyle.italic)),
+                    const SizedBox(height: 8),
+                    // Badge "Sous surveillance"
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.25))),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Container(
+                          width: 6, height: 6,
+                          decoration: const BoxDecoration(
+                            color: Colors.greenAccent,
+                            shape: BoxShape.circle)),
+                        const SizedBox(width: 5),
+                        Text(since, style: const TextStyle(
+                          fontSize: 10, fontWeight: FontWeight.w600,
+                          color: Colors.white)),
+                      ])),
+                  ],
+                ),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+// ─── Informations médicales ───────────────────────────────────
+class _MedicalInfoCard extends StatelessWidget {
+  final Map<String, dynamic> detail;
+  const _MedicalInfoCard({required this.detail});
+
+  @override
+  Widget build(BuildContext context) => _SectionCard(
+    title: 'Informations médicales',
+    icon: Icons.medical_information_rounded,
+    iconColor: AppColors.primary,
+    child: Column(children: [
+      _InfoRow(icon: Icons.medication_rounded,
+        label: 'Traitement',
+        value: detail['treatment'] as String? ?? '—',
+        color: AppColors.primary),
+      const _Divider(),
+      _InfoRow(icon: Icons.coronavirus_rounded,
+        label: 'Type de crise',
+        value: detail['seizureType'] as String? ?? '—',
+        color: AppColors.warning),
+      const _Divider(),
+      _InfoRow(icon: Icons.bloodtype_rounded,
+        label: 'Groupe sanguin',
+        value: detail['bloodGroup'] as String? ?? '—',
+        color: AppColors.seizureRed),
+      const _Divider(),
+      _InfoRow(icon: Icons.monitor_weight_rounded,
+        label: 'Poids',
+        value: detail['weight'] as String? ?? '—',
+        color: AppColors.teal),
+      const _Divider(),
+      _InfoRow(icon: Icons.warning_amber_rounded,
+        label: 'Allergies',
+        value: detail['allergies'] as String? ?? '—',
+        color: AppColors.warning),
+    ]),
+  );
+}
+
+// ─── Compliance traitement ────────────────────────────────────
+class _ComplianceCard extends StatelessWidget {
+  final double compliance;
+  const _ComplianceCard({required this.compliance});
+
+  @override
+  Widget build(BuildContext context) {
+    final pct   = (compliance * 100).round();
+    final color = pct >= 90 ? AppColors.teal
+                : pct >= 70 ? AppColors.warning
+                : AppColors.seizureRed;
+    final label = pct >= 90 ? 'Excellente' : pct >= 70 ? 'Correcte' : 'Insuffisante';
+
+    return _SectionCard(
+      title: 'Compliance au traitement',
+      icon: Icons.task_alt_rounded,
+      iconColor: color,
+      child: Column(children: [
+        Row(children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('$pct%', style: TextStyle(
+                  fontSize: 32, fontWeight: FontWeight.w800, color: color)),
+                Text(label, style: TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w600,
+                  color: color.withValues(alpha: 0.8))),
+              ]),
+          ),
+          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            const Text('Prises de médicament',
+              style: TextStyle(fontSize: 11,
+                color: AppColors.textSecondary)),
+            const Text('30 derniers jours',
+              style: TextStyle(fontSize: 10, color: AppColors.textHint)),
+          ]),
+        ]),
+        const SizedBox(height: 12),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: LinearProgressIndicator(
+            value: compliance,
+            minHeight: 10,
+            backgroundColor: AppColors.cardBorder,
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+// ─── Stats crises ─────────────────────────────────────────────
+class _SeizureStatsCard extends ConsumerWidget {
+  final String patientId;
+  const _SeizureStatsCard({required this.patientId});
+
+  String _fmt(int s) {
+    final m = s ~/ 60, sec = s % 60;
+    return m > 0 ? '${m}m ${sec}s' : '${sec}s';
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(seizureListProvider(patientId));
+    return async.when(
+      loading: () => Container(
+        height: 90,
+        decoration: BoxDecoration(
+          color: AppColors.surfaceAlt,
+          borderRadius: BorderRadius.circular(16))),
+      error: (_, __) => const SizedBox(),
+      data: (list) {
+        final now = DateTime.now();
+        final thisMonth = list.where((s) =>
+          s.datetime.month == now.month &&
+          s.datetime.year  == now.year).toList();
+        final avgDur = list.isEmpty ? 0
+          : list.map((s) => s.durationSeconds)
+              .reduce((a, b) => a + b) ~/ list.length;
+        final avgScore = list.isEmpty ? 0.0
+          : list.map((s) => s.mlScore)
+              .reduce((a, b) => a + b) / list.length;
+
+        return _SectionCard(
+          title: 'Statistiques des crises',
+          icon: Icons.analytics_rounded,
+          iconColor: AppColors.seizureRed,
+          child: Row(children: [
+            _StatBox(value: '${thisMonth.length}',
+              label: 'Ce mois', color: AppColors.seizureRed,
+              icon: Icons.calendar_month_rounded),
+            _StatDivider(),
+            _StatBox(value: '${list.length}',
+              label: 'Total', color: AppColors.primary,
+              icon: Icons.summarize_rounded),
+            _StatDivider(),
+            _StatBox(value: _fmt(avgDur),
+              label: 'Durée moy.', color: AppColors.teal,
+              icon: Icons.timer_rounded),
+            _StatDivider(),
+            _StatBox(
+              value: list.isEmpty
+                ? '—'
+                : '${(avgScore * 100).toStringAsFixed(0)}%',
+              label: 'Score ML', color: AppColors.warning,
+              icon: Icons.psychology_rounded),
+          ]),
+        );
+      },
+    );
+  }
+}
+
+// ─── Déclencheurs ─────────────────────────────────────────────
+class _TriggersCard extends StatelessWidget {
+  final List<String> triggers;
+  const _TriggersCard({required this.triggers});
+
+  @override
+  Widget build(BuildContext context) => _SectionCard(
+    title: 'Déclencheurs identifiés',
+    icon: Icons.bolt_rounded,
+    iconColor: AppColors.warning,
+    child: triggers.isEmpty
+      ? const Text('Aucun déclencheur identifié',
+          style: TextStyle(fontSize: 13, color: AppColors.textSecondary))
+      : Wrap(
+          spacing: 8, runSpacing: 8,
+          children: triggers.map((t) => Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFFF7ED), Color(0xFFFEF3C7)]),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppColors.warning.withValues(alpha: 0.4))),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.bolt_rounded,
+                size: 13, color: AppColors.warning),
+              const SizedBox(width: 5),
+              Text(t, style: const TextStyle(
+                fontSize: 12, fontWeight: FontWeight.w600,
+                color: Color(0xFF92400E))),
+            ]),
+          )).toList(),
+        ),
+  );
+}
+
+// ─── Notes cliniques ──────────────────────────────────────────
+class _ClinicalNotesCard extends StatelessWidget {
+  final List<Map<String, dynamic>> notes;
+  final String patientName;
+  final BuildContext context;
+  const _ClinicalNotesCard({
+    required this.notes, required this.patientName,
+    required this.context});
+
+  @override
+  Widget build(BuildContext _) => _SectionCard(
+    title: 'Notes cliniques',
+    icon: Icons.notes_rounded,
+    iconColor: AppColors.primaryDark,
+    child: notes.isEmpty
+      ? const Text('Aucune note pour ce patient',
+          style: TextStyle(fontSize: 13, color: AppColors.textSecondary))
+      : Column(children: notes.asMap().entries.map((e) {
+          final n = e.value;
+          final isLast = e.key == notes.length - 1;
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Timeline
+              Column(children: [
+                Container(
+                  width: 28, height: 28,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryPale,
+                    borderRadius: BorderRadius.circular(8)),
+                  child: const Icon(Icons.edit_note_rounded,
+                    size: 14, color: AppColors.primary)),
+                if (!isLast) Container(
+                  width: 1, height: 30,
+                  color: AppColors.cardBorder,
+                  margin: const EdgeInsets.symmetric(vertical: 4)),
+              ]),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(n['date'] as String? ?? '',
+                        style: const TextStyle(
+                          fontSize: 10, fontWeight: FontWeight.w700,
+                          color: AppColors.primary)),
+                      const SizedBox(height: 3),
+                      Text(n['text'] as String? ?? '',
+                        style: const TextStyle(
+                          fontSize: 13, color: AppColors.textPrimary,
+                          height: 1.4)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        }).toList()),
+  );
+}
+
+// ─── Composants réutilisables ─────────────────────────────────
+
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  const _SectionLabel(this.text);
+  @override
+  Widget build(BuildContext context) => Text(text,
+    style: const TextStyle(
+      fontSize: 13, fontWeight: FontWeight.w700,
+      color: AppColors.textSecondary, letterSpacing: 0.3));
+}
+
+class _SectionCard extends StatelessWidget {
+  final String  title;
+  final IconData icon;
+  final Color   iconColor;
+  final Widget  child;
+  const _SectionCard({required this.title, required this.icon,
+    required this.iconColor, required this.child});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: AppColors.cardBorder),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.04),
+          blurRadius: 14, offset: const Offset(0, 4)),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          Container(
+            width: 30, height: 30,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8)),
+            child: Icon(icon, size: 15, color: iconColor)),
+          const SizedBox(width: 10),
+          Text(title, style: const TextStyle(
+            fontSize: 13, fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary)),
+        ]),
+        const SizedBox(height: 14),
+        child,
+      ],
+    ),
+  );
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String   label, value;
+  final Color    color;
+  const _InfoRow({required this.icon, required this.label,
+    required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 7),
+    child: Row(children: [
+      Container(
+        width: 28, height: 28,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(7)),
+        child: Icon(icon, size: 14, color: color)),
+      const SizedBox(width: 10),
+      Text(label, style: const TextStyle(
+        fontSize: 12, color: AppColors.textSecondary,
+        fontWeight: FontWeight.w500)),
+      const Spacer(),
+      Text(value, style: const TextStyle(
+        fontSize: 13, fontWeight: FontWeight.w600,
+        color: AppColors.textPrimary)),
+    ]),
+  );
+}
+
+class _Divider extends StatelessWidget {
+  const _Divider();
+  @override
+  Widget build(BuildContext context) => const Divider(
+    height: 1, thickness: 0.6, color: AppColors.cardBorder);
+}
+
+class _StatBox extends StatelessWidget {
+  final String value, label;
+  final Color  color;
+  final IconData icon;
+  const _StatBox({required this.value, required this.label,
+    required this.color, required this.icon});
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+    child: Column(children: [
+      Container(
+        width: 32, height: 32,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(9)),
+        child: Icon(icon, size: 16, color: color)),
+      const SizedBox(height: 6),
+      Text(value, style: TextStyle(
+        fontSize: 16, fontWeight: FontWeight.w800, color: color)),
+      Text(label, style: const TextStyle(
+        fontSize: 10, color: AppColors.textSecondary),
+        textAlign: TextAlign.center),
+    ]),
+  );
+}
+
+class _StatDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 1, height: 48, color: AppColors.cardBorder);
+}
+
+class _DoctorActionTile extends StatelessWidget {
+  final IconData icon;
+  final String   title, subtitle;
+  final Color    color;
+  final VoidCallback onTap;
+  const _DoctorActionTile({required this.icon, required this.title,
+    required this.subtitle, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10, offset: const Offset(0, 3)),
+        ],
+      ),
+      child: Row(children: [
+        Container(
+          width: 46, height: 46,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                color.withValues(alpha: 0.18),
+                color.withValues(alpha: 0.08)]),
+            borderRadius: BorderRadius.circular(12)),
+          child: Icon(icon, color: color, size: 22)),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(
+                fontSize: 14, fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary)),
+              Text(subtitle, style: const TextStyle(
+                fontSize: 12, color: AppColors.textSecondary)),
+            ],
+          ),
+        ),
+        Container(
+          width: 28, height: 28,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(8)),
+          child: Icon(Icons.chevron_right_rounded, color: color, size: 16)),
+      ]),
+    ),
+  );
+}

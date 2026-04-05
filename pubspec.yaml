@@ -1,0 +1,62 @@
+name: epitrack
+description: Brassard intelligent de détection d'épilepsie tonico-clonique
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.5.1
+
+  # Navigation
+  go_router: ^13.2.0
+
+  # BLE
+  flutter_blue_plus: ^1.32.0
+
+  # HTTP
+  http: ^1.2.1
+  dio: ^5.4.3
+
+  # Firebase
+  firebase_core: ^2.27.0
+  firebase_messaging: ^14.7.20
+
+  # Notifications locales
+  flutter_local_notifications: ^17.0.0
+
+  # Base de données locale
+  sqflite: ^2.3.2
+  shared_preferences: ^2.2.3
+
+  # Graphiques
+  fl_chart: ^0.68.0
+
+  # Téléphonie
+  url_launcher: ^6.2.5
+
+  # Permissions
+  permission_handler: ^11.3.1
+
+  # PDF
+  pdf: ^3.10.8
+  printing: ^5.12.0
+
+  # Internationalisation
+  intl: ^0.20.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  

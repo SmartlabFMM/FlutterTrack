@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "6855081944",
+    "project_id": "epitrack-c79db",
+    "storage_bucket": "epitrack-c79db.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:6855081944:android:dc7325e07c2f8f0477fcad",
+        "android_client_info": {
+          "package_name": "com.epitrack.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCr3b4sLhPbe44gPynCZKIysYvSo2iSAgE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
