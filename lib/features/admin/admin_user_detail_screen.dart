@@ -467,6 +467,14 @@ class _AdminUserDetailScreenState
                 if (user.role == UserRole.doctor)
                   _editField('Spécialité', specCtrl),
 
+                // Famille : téléphone, adresse
+                if (user.role == UserRole.family) ...[
+                  _editField('Téléphone', phoneCtrl,
+                    keyboardType: TextInputType.phone),
+                  _editField('Adresse exacte', addressCtrl,
+                    maxLines: 2),
+                ],
+
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
@@ -484,6 +492,10 @@ class _AdminUserDetailScreenState
                       }
                       if (user.role == UserRole.doctor) {
                         toSave['specialite'] = specCtrl.text.trim();
+                      }
+                      if (user.role == UserRole.family) {
+                        toSave['phone']   = phoneCtrl.text.trim();
+                        toSave['address'] = addressCtrl.text.trim();
                       }
                       await FirebaseFirestore.instance
                         .collection('users').doc(widget.userId)
@@ -635,7 +647,12 @@ class _AdminUserDetailScreenState
                     icon: Icons.edit_rounded,
                     color: AppColors.primary,
                     title: 'Modifier les informations',
-                    subtitle: 'Nom, téléphone, âge, adresse',
+                    subtitle: switch (user.role) {
+                      UserRole.patient => 'Nom, âge, téléphone, adresse',
+                      UserRole.doctor  => 'Nom, spécialité',
+                      UserRole.family  => 'Nom, téléphone, adresse',
+                      UserRole.admin   => 'Nom',
+                    },
                     onTap: () => _editInfo(user)),
 
                   if (user.role == UserRole.patient) ...[

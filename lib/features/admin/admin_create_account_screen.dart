@@ -70,6 +70,12 @@ class _AdminCreateAccountScreenState
         if (_specCtrl.text.isNotEmpty)
           extra['specialite'] = _specCtrl.text.trim();
       }
+      if (_role == UserRole.family) {
+        if (_phoneCtrl.text.isNotEmpty)
+          extra['phone']   = _phoneCtrl.text.trim();
+        if (_addressCtrl.text.isNotEmpty)
+          extra['address'] = _addressCtrl.text.trim();
+      }
 
       await createUserAsAdmin(
         name:            _nameCtrl.text.trim(),
@@ -102,6 +108,10 @@ class _AdminCreateAccountScreenState
   Widget build(BuildContext context) {
     final users = ref.watch(allUsersProvider);
 
+    // Vérifie si un médecin existe déjà
+    final doctorExists = users.valueOrNull
+      ?.any((u) => u.role == UserRole.doctor) ?? false;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -133,7 +143,8 @@ class _AdminCreateAccountScreenState
                 icon: Icons.medical_services_rounded,
                 color: AppColors.tealDark,
                 selected: _role == UserRole.doctor,
-                onTap: () => setState(() {
+                disabled: doctorExists,
+                onTap: doctorExists ? null : () => setState(() {
                   _role = UserRole.doctor; _resetFields(); })),
               const SizedBox(width: 8),
               _RoleBtn(
@@ -181,22 +192,42 @@ class _AdminCreateAccountScreenState
             // ── Champs Famille ───────────────────────────────
             if (_role == UserRole.family) ...[
               const SizedBox(height: 8),
+              const _SectionTitle('Informations personnelles'),
+              const SizedBox(height: 12),
+              _Field('Téléphone', Icons.call_rounded, _phoneCtrl,
+                keyboardType: TextInputType.phone),
+              _Field('Adresse exacte', Icons.location_on_rounded,
+                _addressCtrl, maxLines: 2),
+              const SizedBox(height: 8),
               const _SectionTitle('Patient lié'),
               const SizedBox(height: 12),
               users.when(
                 data: (list) {
+                  final linkedPatientIds = list
+                    .where((u) =>
+                      u.role == UserRole.family &&
+                      u.linkedPatientId != null)
+                    .map((u) => u.linkedPatientId!)
+                    .toSet();
+
                   final patients = list
-                    .where((u) => u.role == UserRole.patient)
+                    .where((u) =>
+                      u.role == UserRole.patient &&
+                      !linkedPatientIds.contains(u.uid))
                     .toList();
                   if (patients.isEmpty) {
+                    final hasPatients = list
+                      .any((u) => u.role == UserRole.patient);
                     return Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceAlt,
                         borderRadius: BorderRadius.circular(12)),
-                      child: const Text(
-                        'Aucun patient enregistré. Créez d\'abord un compte patient.',
-                        style: TextStyle(
+                      child: Text(
+                        hasPatients
+                          ? 'Tous les patients ont déjà un compte famille associé.'
+                          : 'Aucun patient enregistré. Créez d\'abord un compte patient.',
+                        style: const TextStyle(
                           fontSize: 13, color: AppColors.textSecondary)));
                   }
                   return DropdownButtonFormField<String>(
@@ -326,30 +357,49 @@ class _RoleBtn extends StatelessWidget {
   final IconData icon;
   final Color color;
   final bool selected;
-  final VoidCallback onTap;
+  final bool disabled;
+  final VoidCallback? onTap;
   const _RoleBtn({required this.label, required this.icon,
-    required this.color, required this.selected, required this.onTap});
+    required this.color, required this.selected,
+    this.disabled = false, this.onTap});
 
   @override
   Widget build(BuildContext context) => Expanded(
-    child: GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: selected ? color : AppColors.surfaceAlt,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? color : AppColors.cardBorder)),
-        child: Column(children: [
-          Icon(icon, size: 22,
-            color: selected ? Colors.white : color),
-          const SizedBox(height: 5),
-          Text(label,
-            style: TextStyle(
-              fontSize: 11, fontWeight: FontWeight.w700,
-              color: selected ? Colors.white : color)),
-        ]),
+    child: Tooltip(
+      message: disabled ? 'Déjà créé' : '',
+      child: GestureDetector(
+        onTap: disabled ? null : onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: disabled
+              ? AppColors.surfaceAlt
+              : selected ? color : AppColors.surfaceAlt,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: disabled
+                ? AppColors.cardBorder
+                : selected ? color : AppColors.cardBorder)),
+          child: Column(children: [
+            Icon(icon, size: 22,
+              color: disabled
+                ? AppColors.textHint
+                : selected ? Colors.white : color),
+            const SizedBox(height: 5),
+            Text(label,
+              style: TextStyle(
+                fontSize: 11, fontWeight: FontWeight.w700,
+                color: disabled
+                  ? AppColors.textHint
+                  : selected ? Colors.white : color)),
+            if (disabled) ...[
+              const SizedBox(height: 2),
+              const Text('Déjà créé',
+                style: TextStyle(
+                  fontSize: 9, color: AppColors.textHint)),
+            ],
+          ]),
+        ),
       ),
     ),
   );

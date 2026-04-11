@@ -7,9 +7,6 @@ import '../../core/constants/app_strings.dart';
 import '../../core/widgets/epitrack_logo.dart';
 import '../../providers/auth_provider.dart';
 import 'role_router.dart';
-import 'signup_screen.dart';
-
-const _demoAccounts = [];
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -54,13 +51,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     if (auth.status == AuthStatus.authenticated) {
       context.go(RoleRouter.redirectForRole(auth.user!.role));
     }
-  }
-
-  void _fillDemo(String email, String password) {
-    setState(() {
-      _emailCtrl.text    = email;
-      _passwordCtrl.text = password;
-    });
   }
 
   @override
@@ -277,104 +267,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       ),
                     ),
 
-                    // ── Créer un compte ────────────────────────
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                      child: Center(
-                        child: GestureDetector(
-                          onTap: () => Navigator.push(context,
-                            MaterialPageRoute(
-                              builder: (_) => const SignupScreen())),
-                          child: RichText(text: const TextSpan(children: [
-                            TextSpan(
-                              text: 'Pas encore de compte ? ',
-                              style: TextStyle(
-                                color: AppColors.textSecondary, fontSize: 13)),
-                            TextSpan(
-                              text: 'Créer un compte',
-                              style: TextStyle(
-                                color: AppColors.primary, fontSize: 13,
-                                fontWeight: FontWeight.w700)),
-                          ])),
-                        ),
-                      ),
-                    ),
-
-                    // ── Comptes de démonstration ───────────────
-                    if (_demoAccounts.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-                      child: FadeTransition(
-                        opacity: _fadeAnim,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(children: [
-                              Container(
-                                width: 24, height: 1,
-                                color: AppColors.cardBorder),
-                              const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 10),
-                                child: Text('Comptes de démonstration',
-                                  style: TextStyle(
-                                    fontSize: 12, color: AppColors.textHint,
-                                    fontWeight: FontWeight.w500))),
-                              Expanded(child: Container(
-                                height: 1, color: AppColors.cardBorder)),
-                            ]),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: _demoAccounts.map((account) {
-                                final color = account['color'] as Color;
-                                return Expanded(
-                                  child: Padding(
-                                    padding: EdgeInsets.only(
-                                      right: account == _demoAccounts.last ? 0 : 8),
-                                    child: GestureDetector(
-                                      onTap: () => _fillDemo(
-                                        account['email'] as String,
-                                        account['password'] as String),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 12, horizontal: 8),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.surface,
-                                          borderRadius: BorderRadius.circular(14),
-                                          border: Border.all(
-                                            color: AppColors.cardBorder),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withValues(alpha: 0.04),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 2)),
-                                          ],
-                                        ),
-                                        child: Column(children: [
-                                          Container(
-                                            width: 36, height: 36,
-                                            decoration: BoxDecoration(
-                                              color: color.withValues(alpha: 0.15),
-                                              borderRadius: BorderRadius.circular(10)),
-                                            child: Icon(
-                                              account['icon'] as IconData,
-                                              color: color, size: 18)),
-                                          const SizedBox(height: 6),
-                                          Text(account['label'] as String,
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w700,
-                                              color: AppColors.textPrimary)),
-                                        ]),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
 
                     const SizedBox(height: 24),
                     const Center(
