@@ -9,29 +9,7 @@ import '../../providers/auth_provider.dart';
 import 'role_router.dart';
 import 'signup_screen.dart';
 
-const _demoAccounts = [
-  {
-    'label': 'Patient',
-    'email': 'patient@epitrack.com',
-    'password': 'patient123',
-    'icon': Icons.person_rounded,
-    'color': AppColors.primaryLight,
-  },
-  {
-    'label': 'Famille',
-    'email': 'famille@epitrack.com',
-    'password': 'famille123',
-    'icon': Icons.family_restroom_rounded,
-    'color': AppColors.tealLight,
-  },
-  {
-    'label': 'Médecin',
-    'email': 'docteur@epitrack.com',
-    'password': 'docteur123',
-    'icon': Icons.medical_services_rounded,
-    'color': AppColors.primarySurface,
-  },
-];
+const _demoAccounts = [];
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -323,6 +301,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     ),
 
                     // ── Comptes de démonstration ───────────────
+                    if (_demoAccounts.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
                       child: FadeTransition(

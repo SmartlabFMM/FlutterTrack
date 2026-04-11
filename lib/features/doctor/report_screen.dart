@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -8,25 +9,7 @@ import 'package:printing/printing.dart';
 import '../../core/constants/app_colors.dart';
 import '../../models/seizure_model.dart';
 import '../../providers/seizure_provider.dart';
-import '../../services/odoo_service.dart';
 
-// ── Données mode de vie (statiques pour la démo) ──────────────
-const _lifestyleData = {
-  'sleep':       {'label': 'Sommeil', 'value': '6.5h/nuit', 'status': 'warning', 'note': 'Insuffisant — objectif 8h'},
-  'medication':  {'label': 'Compliance médicament', 'value': '92%', 'status': 'good', 'note': 'Excellente adhérence'},
-  'stress':      {'label': 'Niveau de stress', 'value': 'Modéré', 'status': 'warning', 'note': 'Stress professionnel signalé'},
-  'exercise':    {'label': 'Activité physique', 'value': '3×/semaine', 'status': 'good', 'note': 'Marche + natation'},
-  'hydration':   {'label': 'Hydratation', 'value': '1.2L/j', 'status': 'warning', 'note': 'Légèrement insuffisant'},
-  'alcohol':     {'label': 'Alcool', 'value': 'Aucun', 'status': 'good', 'note': 'Abstinent total'},
-  'screen':      {'label': 'Exposition écrans', 'value': '4h/j', 'status': 'warning', 'note': 'Réduire après 21h'},
-  'diet':        {'label': 'Alimentation', 'value': 'Équilibrée', 'status': 'good', 'note': 'Pas de repas sautés'},
-};
-
-const _triggers = [
-  'Manque de sommeil',
-  'Stress professionnel',
-  'Légère déshydratation',
-];
 
 class ReportScreen extends ConsumerWidget {
   final String patientId;
@@ -34,9 +17,10 @@ class ReportScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final seizures = ref.watch(seizureListProvider(patientId));
-    final name     = OdooService.patientName(patientId);
-    final detail   = OdooService.patientDetail(patientId);
+    final seizures   = ref.watch(seizureListProvider(patientId));
+    final patientRaw = ref.watch(patientDataProvider(patientId)).valueOrNull ?? {};
+    final name       = patientRaw['nom'] as String? ?? 'Patient #$patientId';
+    final detail     = patientRaw.isNotEmpty ? patientRaw : null;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
@@ -46,7 +30,7 @@ class ReportScreen extends ConsumerWidget {
           backgroundColor: AppColors.surface,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_rounded),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
           ),
           title: const Text('Rapport médical'),
           actions: [
@@ -85,21 +69,22 @@ class ReportScreen extends ConsumerWidget {
             const SizedBox(height: 14),
 
             // ── Mode de vie ──────────────────────────────────
-            _LifestyleSection(detail: detail),
+            _LifestyleSection(lifestyle:
+              detail != null
+                ? (detail['lifestyle'] as Map?)?.cast<String, dynamic>()
+                : null),
             const SizedBox(height: 14),
 
             // ── Déclencheurs ──────────────────────────────────
             _TriggersSection(
               triggers: detail != null
-                ? List<String>.from(detail['triggers'] as List? ?? _triggers)
-                : _triggers),
+                ? List<String>.from(detail['triggers'] as List? ?? [])
+                : []),
             const SizedBox(height: 14),
 
             // ── Compliance ────────────────────────────────────
             _ComplianceSection(
-              compliance: detail != null
-                ? (detail['compliance'] as num?)?.toDouble() ?? 0.85
-                : 0.85),
+              compliance: (detail?['compliance'] as num?)?.toDouble()),
             const SizedBox(height: 14),
 
             // ── Tableau des crises ───────────────────────────
@@ -159,12 +144,13 @@ class ReportScreen extends ConsumerWidget {
     final avgScore = seizures.isEmpty ? 0.0
       : seizures.map((s) => s.mlScore).reduce((a, b) => a + b)
           / seizures.length;
-    final compliance = detail != null
-      ? (detail['compliance'] as num?)?.toDouble() ?? 0.85
-      : 0.85;
+    final compliance = (detail?['compliance'] as num?)?.toDouble();
+    final lifestyle = detail != null
+      ? (detail['lifestyle'] as Map?)?.cast<String, dynamic>() ?? {}
+      : <String, dynamic>{};
     final triggers = detail != null
-      ? List<String>.from(detail['triggers'] as List? ?? _triggers)
-      : _triggers;
+      ? List<String>.from(detail['triggers'] as List? ?? [])
+      : <String>[];
     final notes = detail != null
       ? List<Map<String,dynamic>>.from(detail['notes'] as List? ?? [])
       : <Map<String,dynamic>>[];
@@ -211,7 +197,7 @@ class ReportScreen extends ConsumerWidget {
         pw.Container(
           padding: const pw.EdgeInsets.all(16),
           decoration: pw.BoxDecoration(
-            color: PdfColor.fromHex('1E3A8A'),
+            color: PdfColor.fromHex('DBEAFE'),
             borderRadius: pw.BorderRadius.circular(10)),
           child: pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -220,7 +206,7 @@ class ReportScreen extends ConsumerWidget {
                 pw.Text('RAPPORT DE SUIVI ÉPILEPSIE',
                   style: pw.TextStyle(
                     fontSize: 16, fontWeight: pw.FontWeight.bold,
-                    color: PdfColors.white)),
+                    color: PdfColor.fromHex('1E3A8A'))),
                 pw.SizedBox(height: 10),
                 _pdfInfoLine('Patient',    name),
                 _pdfInfoLine('N° dossier', '#EP-$patientId'),
@@ -239,16 +225,18 @@ class ReportScreen extends ConsumerWidget {
         pw.SizedBox(height: 8),
         pw.Row(children: [
           _pdfStatBox('${seizures.length}', 'Crises totales',
-            PdfColor.fromHex('DC2626')),
+            PdfColor.fromHex('FECACA'), PdfColor.fromHex('991B1B')),
           pw.SizedBox(width: 8),
           _pdfStatBox(_fmt(avgDur), 'Durée moyenne',
-            PdfColor.fromHex('1E40AF')),
+            PdfColor.fromHex('BFDBFE'), PdfColor.fromHex('1E3A8A')),
           pw.SizedBox(width: 8),
           _pdfStatBox('${(avgScore * 100).toStringAsFixed(0)}%',
-            'Score ML moyen', PdfColor.fromHex('F59E0B')),
+            'Score ML moyen', PdfColor.fromHex('FDE68A'), PdfColor.fromHex('92400E')),
           pw.SizedBox(width: 8),
-          _pdfStatBox('${(compliance * 100).round()}%',
-            'Compliance', PdfColor.fromHex('0D9488')),
+          _pdfStatBox(
+            compliance != null ? '${(compliance * 100).round()}%' : '—',
+            'Compliance',
+            PdfColor.fromHex('99F6E4'), PdfColor.fromHex('065F46')),
         ]),
         pw.SizedBox(height: 20),
 
@@ -262,25 +250,15 @@ class ReportScreen extends ConsumerWidget {
             borderRadius: pw.BorderRadius.circular(8),
             border: pw.Border.all(color: PdfColor.fromHex('E2E8F0'))),
           child: pw.Column(children: [
-            // Grille 2 colonnes
-            pw.Row(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Expanded(child: pw.Column(children: [
-                  _pdfLifestyleRow('Sommeil', '6.5h/nuit', false),
-                  _pdfLifestyleRow('Médicament', '92% compliance', true),
-                  _pdfLifestyleRow('Stress', 'Modéré', false),
-                  _pdfLifestyleRow('Exercice', '3×/semaine', true),
-                ])),
-                pw.SizedBox(width: 16),
-                pw.Expanded(child: pw.Column(children: [
-                  _pdfLifestyleRow('Hydratation', '1.2L/jour', false),
-                  _pdfLifestyleRow('Alcool', 'Aucun', true),
-                  _pdfLifestyleRow('Écrans', '4h/jour', false),
-                  _pdfLifestyleRow('Alimentation', 'Équilibrée', true),
-                ])),
-              ],
-            ),
+            lifestyle.isEmpty
+              ? pw.Text('Aucune donnée — le patient n\'a pas encore renseigné son mode de vie.',
+                  style: const pw.TextStyle(fontSize: 10))
+              : pw.Column(children: lifestyle.entries.toList().asMap().entries.map((e) {
+                  final odd = e.key.isOdd;
+                  final label = e.value.key as String;
+                  final value = e.value.value?.toString() ?? '—';
+                  return _pdfLifestyleRow(label, value, odd);
+                }).toList()),
           ]),
         ),
         pw.SizedBox(height: 16),
@@ -290,18 +268,21 @@ class ReportScreen extends ConsumerWidget {
         pw.SizedBox(height: 6),
         pw.Wrap(
           spacing: 8, runSpacing: 6,
-          children: triggers.map((t) => pw.Container(
-            padding: const pw.EdgeInsets.symmetric(
-              horizontal: 10, vertical: 4),
-            decoration: pw.BoxDecoration(
-              color: PdfColor.fromHex('FEF3C7'),
-              borderRadius: pw.BorderRadius.circular(20),
-              border: pw.Border.all(color: PdfColor.fromHex('F59E0B'))),
-            child: pw.Text('* $t',
-              style: pw.TextStyle(
-                fontSize: 10, fontWeight: pw.FontWeight.bold,
-                color: PdfColor.fromHex('92400E'))),
-          )).toList(),
+          children: triggers.isEmpty
+            ? [pw.Text('Aucun déclencheur renseigné',
+                style: const pw.TextStyle(fontSize: 10))]
+            : triggers.map((t) => pw.Container(
+              padding: const pw.EdgeInsets.symmetric(
+                horizontal: 10, vertical: 4),
+              decoration: pw.BoxDecoration(
+                color: PdfColor.fromHex('FEF9C3'),
+                borderRadius: pw.BorderRadius.circular(20),
+                border: pw.Border.all(color: PdfColor.fromHex('FDE68A'))),
+              child: pw.Text(t,
+                style: pw.TextStyle(
+                  fontSize: 10, fontWeight: pw.FontWeight.bold,
+                  color: PdfColor.fromHex('78350F'))),
+            )).toList(),
         ),
         pw.SizedBox(height: 20),
 
@@ -311,10 +292,11 @@ class ReportScreen extends ConsumerWidget {
         pw.TableHelper.fromTextArray(
           headers: ['Date & Heure', 'Durée', 'Score ML', 'Sévérité'],
           headerStyle: pw.TextStyle(
-            fontWeight: pw.FontWeight.bold, color: PdfColors.white,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColor.fromHex('1E3A8A'),
             fontSize: 11),
           headerDecoration: pw.BoxDecoration(
-            color: PdfColor.fromHex('1E40AF')),
+            color: PdfColor.fromHex('DBEAFE')),
           oddRowDecoration: pw.BoxDecoration(
             color: PdfColor.fromHex('F8FAFF')),
           cellAlignment: pw.Alignment.centerLeft,
@@ -446,31 +428,31 @@ class ReportScreen extends ConsumerWidget {
       pw.SizedBox(
         width: 80,
         child: pw.Text('$label :',
-          style: const pw.TextStyle(
-            fontSize: 10, color: PdfColors.grey300))),
+          style: pw.TextStyle(
+            fontSize: 10, color: PdfColor.fromHex('4B6CB7')))),
       pw.Text(value,
         style: pw.TextStyle(
           fontSize: 10, fontWeight: pw.FontWeight.bold,
-          color: PdfColors.white)),
+          color: PdfColor.fromHex('1E3A8A'))),
     ]),
   );
 
-  pw.Widget _pdfStatBox(String val, String lbl, PdfColor color) =>
+  pw.Widget _pdfStatBox(String val, String lbl, PdfColor bg, PdfColor fg) =>
     pw.Expanded(
       child: pw.Container(
         padding: const pw.EdgeInsets.all(10),
         decoration: pw.BoxDecoration(
-          color: color.shade(0.85),
+          color: bg,
           borderRadius: pw.BorderRadius.circular(8)),
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
             pw.Text(val, style: pw.TextStyle(
               fontSize: 16, fontWeight: pw.FontWeight.bold,
-              color: color)),
+              color: fg)),
             pw.SizedBox(height: 2),
             pw.Text(lbl, style: pw.TextStyle(
-              fontSize: 9, color: color),
+              fontSize: 9, color: fg),
               textAlign: pw.TextAlign.center),
           ],
         ),
@@ -480,14 +462,15 @@ class ReportScreen extends ConsumerWidget {
   pw.Widget _pdfLifestyleRow(String label, String value, bool odd) =>
     pw.Container(
       padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
-      color: odd ? PdfColors.white : PdfColor.fromHex('F1F5FF'),
+      color: odd ? PdfColors.white : PdfColor.fromHex('F0F7FF'),
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
-          pw.Text(label, style: const pw.TextStyle(fontSize: 10)),
+          pw.Text(label, style: pw.TextStyle(
+            fontSize: 10, color: PdfColor.fromHex('374151'))),
           pw.Text(value, style: pw.TextStyle(
             fontSize: 10, fontWeight: pw.FontWeight.bold,
-            color: PdfColor.fromHex('1E40AF'))),
+            color: PdfColor.fromHex('3B6FBF'))),
         ],
       ),
     );
@@ -623,112 +606,40 @@ class _SeizureSummaryCard extends StatelessWidget {
 }
 
 class _LifestyleSection extends StatelessWidget {
-  final Map<String, dynamic>? detail;
-  const _LifestyleSection({this.detail});
+  final Map<String, dynamic>? lifestyle;
+  const _LifestyleSection({this.lifestyle});
 
   @override
   Widget build(BuildContext context) => _Card(
     icon: Icons.favorite_rounded, iconColor: const Color(0xFFEC4899),
     title: 'Mode de vie',
-    child: Column(children: [
-      Row(children: [
-        Expanded(child: _LifeItem(
-          icon: Icons.bedtime_rounded,
-          label: 'Sommeil',
-          value: '6.5h/nuit',
-          good: false)),
-        const SizedBox(width: 8),
-        Expanded(child: _LifeItem(
-          icon: Icons.medication_rounded,
-          label: 'Médicament',
-          value: '92% compliance',
-          good: true)),
-      ]),
-      const SizedBox(height: 8),
-      Row(children: [
-        Expanded(child: _LifeItem(
-          icon: Icons.self_improvement_rounded,
-          label: 'Stress',
-          value: 'Modéré',
-          good: false)),
-        const SizedBox(width: 8),
-        Expanded(child: _LifeItem(
-          icon: Icons.directions_walk_rounded,
-          label: 'Exercice',
-          value: '3×/semaine',
-          good: true)),
-      ]),
-      const SizedBox(height: 8),
-      Row(children: [
-        Expanded(child: _LifeItem(
-          icon: Icons.water_drop_rounded,
-          label: 'Hydratation',
-          value: '1.2L/j',
-          good: false)),
-        const SizedBox(width: 8),
-        Expanded(child: _LifeItem(
-          icon: Icons.no_drinks_rounded,
-          label: 'Alcool',
-          value: 'Aucun',
-          good: true)),
-      ]),
-      const SizedBox(height: 8),
-      Row(children: [
-        Expanded(child: _LifeItem(
-          icon: Icons.light_mode_rounded,
-          label: 'Écrans',
-          value: '4h/jour',
-          good: false)),
-        const SizedBox(width: 8),
-        Expanded(child: _LifeItem(
-          icon: Icons.restaurant_rounded,
-          label: 'Alimentation',
-          value: 'Équilibrée',
-          good: true)),
-      ]),
-    ]),
+    child: lifestyle == null || lifestyle!.isEmpty
+      ? const _EmptyRow('Le patient n\'a pas encore renseigné son mode de vie')
+      : Wrap(
+          spacing: 8, runSpacing: 8,
+          children: lifestyle!.entries.map((e) {
+            final val  = e.value as Map?;
+            final label = val?['label'] as String? ?? e.key;
+            final value = val?['value'] as String? ?? '—';
+            final good  = val?['status'] == 'good';
+            final color = good ? AppColors.teal : AppColors.warning;
+            return Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.07),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: color.withValues(alpha: 0.25))),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(label, style: const TextStyle(
+                  fontSize: 10, color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w500)),
+                Text(value, style: TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+              ]),
+            );
+          }).toList(),
+        ),
   );
-}
-
-class _LifeItem extends StatelessWidget {
-  final IconData icon;
-  final String   label, value;
-  final bool     good;
-  const _LifeItem({required this.icon, required this.label,
-    required this.value, required this.good});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = good ? AppColors.teal : AppColors.warning;
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.25))),
-      child: Row(children: [
-        Container(
-          width: 28, height: 28,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(7)),
-          child: Icon(icon, size: 14, color: color)),
-        const SizedBox(width: 8),
-        Expanded(child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: const TextStyle(
-              fontSize: 10, color: AppColors.textSecondary,
-              fontWeight: FontWeight.w500)),
-            Text(value, style: TextStyle(
-              fontSize: 12, fontWeight: FontWeight.w700, color: color)),
-          ],
-        )),
-        Icon(good ? Icons.check_circle_rounded : Icons.info_rounded,
-          size: 14, color: color),
-      ]),
-    );
-  }
 }
 
 class _TriggersSection extends StatelessWidget {
@@ -739,34 +650,43 @@ class _TriggersSection extends StatelessWidget {
   Widget build(BuildContext context) => _Card(
     icon: Icons.bolt_rounded, iconColor: AppColors.warning,
     title: 'Déclencheurs identifiés',
-    child: Wrap(
-      spacing: 8, runSpacing: 8,
-      children: triggers.map((t) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: AppColors.warning.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: AppColors.warning.withValues(alpha: 0.35))),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.bolt_rounded, size: 12, color: AppColors.warning),
-          const SizedBox(width: 5),
-          Text(t, style: const TextStyle(
-            fontSize: 12, fontWeight: FontWeight.w600,
-            color: Color(0xFF92400E))),
-        ]),
-      )).toList(),
-    ),
+    child: triggers.isEmpty
+      ? const _EmptyRow('Aucun déclencheur renseigné')
+      : Wrap(
+          spacing: 8, runSpacing: 8,
+          children: triggers.map((t) => Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.warning.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppColors.warning.withValues(alpha: 0.35))),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.bolt_rounded, size: 12, color: AppColors.warning),
+              const SizedBox(width: 5),
+              Text(t, style: const TextStyle(
+                fontSize: 12, fontWeight: FontWeight.w600,
+                color: Color(0xFF92400E))),
+            ]),
+          )).toList(),
+        ),
   );
 }
 
 class _ComplianceSection extends StatelessWidget {
-  final double compliance;
+  final double? compliance;
   const _ComplianceSection({required this.compliance});
 
   @override
   Widget build(BuildContext context) {
-    final pct   = (compliance * 100).round();
+    if (compliance == null) {
+      return _Card(
+        icon: Icons.task_alt_rounded, iconColor: AppColors.textHint,
+        title: 'Compliance au traitement',
+        child: const _EmptyRow('Aucune donnée de compliance disponible'),
+      );
+    }
+    final pct   = (compliance! * 100).round();
     final color = pct >= 90 ? AppColors.teal
                 : pct >= 70 ? AppColors.warning
                 : AppColors.seizureRed;
@@ -794,7 +714,7 @@ class _ComplianceSection extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(6),
           child: LinearProgressIndicator(
-            value: compliance, minHeight: 10,
+            value: compliance!, minHeight: 10,
             backgroundColor: AppColors.cardBorder,
             valueColor: AlwaysStoppedAnimation<Color>(color)),
         ),

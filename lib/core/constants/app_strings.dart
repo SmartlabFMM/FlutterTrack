@@ -43,7 +43,7 @@ class AppStrings {
 
   // Vitaux
   static const String heartRate     = 'Fréquence cardiaque';
-  static const String accel         = 'Accéléromètre';
+  static const String accel         = 'Convulsions';
   static const String gsr           = 'Conductance cutanée';
   static const String bpm           = 'bpm';
   static const String normal        = 'Normal';

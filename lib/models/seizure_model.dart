@@ -1,5 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class SeizureModel {
-  final int      id;
+  final String   id;
   final String   patientId;
   final String   patientName;
   final DateTime datetime;
@@ -29,13 +31,23 @@ class SeizureModel {
     return 'Légère';
   }
 
-  factory SeizureModel.fromOdoo(Map<String, dynamic> j) => SeizureModel(
-    id:              j['id'] as int,
-    patientId:       j['patient_id'][0].toString(),
-    patientName:     j['patient_id'][1] as String,
-    datetime:        DateTime.parse(j['seizure_date'] as String),
-    durationSeconds: j['duration_seconds'] as int,
-    mlScore:         (j['ml_score'] as num).toDouble(),
-    acknowledged:    j['acknowledged'] as bool? ?? false,
-  );
+  factory SeizureModel.fromFirestore(String id, Map<String, dynamic> data) =>
+      SeizureModel(
+        id:              id,
+        patientId:       data['patientId']  as String,
+        patientName:     data['patientNom'] as String? ?? '',
+        datetime:        (data['dateDebut'] as Timestamp).toDate(),
+        durationSeconds: data['duree']      as int? ?? 0,
+        mlScore:         (data['niveauSeverite'] as num?)?.toDouble() ?? 0.0,
+        acknowledged:    data['traitee']    as bool? ?? false,
+      );
+
+  Map<String, dynamic> toFirestore() => {
+    'patientId':       patientId,
+    'patientNom':      patientName,
+    'dateDebut':       Timestamp.fromDate(datetime),
+    'duree':           durationSeconds,
+    'niveauSeverite':  mlScore,
+    'traitee':         acknowledged,
+  };
 }

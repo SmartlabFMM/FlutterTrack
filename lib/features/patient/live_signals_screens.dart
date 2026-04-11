@@ -81,7 +81,7 @@ class _LiveSignalsScreenState extends ConsumerState<LiveSignalsScreen> {
               // ── Graphique accéléromètre ──────────────────
               _SignalCard(
                 title: AppStrings.accel,
-                subtitle: 'Magnitude (g)',
+                subtitle: 'Magnitude convulsive (g)',
                 color: AppColors.accelColor,
                 spots: _accelData,
                 minY: 0, maxY: 4,

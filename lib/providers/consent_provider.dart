@@ -1,17 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-String _key(int uid) => 'epitrack_consent_uid_$uid';
+String _key(String uid) => 'epitrack_consent_uid_$uid';
 
 class ConsentNotifier extends AsyncNotifier<bool> {
   // uid courant — initialisé par checkForUser()
-  int _uid = 0;
+  String _uid = '';
 
   @override
   Future<bool> build() async => false; // par défaut non accepté
 
   /// À appeler juste après l'authentification pour charger le bon état.
-  Future<bool> checkForUser(int uid) async {
+  Future<bool> checkForUser(String uid) async {
     _uid  = uid;
     final prefs   = await SharedPreferences.getInstance();
     final accepted = prefs.getBool(_key(uid)) ?? false;

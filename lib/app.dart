@@ -23,48 +23,46 @@ import 'features/doctor/vitals_screen.dart';
 import 'features/doctor/doctor_alerts_screen.dart';
 import 'features/doctor/report_screen.dart';
 import 'features/doctor/doctor_settings_screen.dart';
+import 'features/admin/admin_dashboard_screen.dart';
+import 'features/admin/admin_accounts_screen.dart';
+import 'features/admin/admin_create_account_screen.dart';
+import 'features/admin/admin_user_detail_screen.dart';
 import 'core/widgets/reminder_overlay.dart';
 import 'providers/auth_provider.dart';
 import 'providers/reminder_provider.dart';
 
-class EpiTrackApp extends ConsumerWidget {
-  const EpiTrackApp({super.key});
+// ── Router notifier ──────────────────────────────────────────
+class _RouterNotifier extends ChangeNotifier {
+  final Ref _ref;
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final router = _buildRouter(ref);
-    // Démarrer le scheduler de rappels dès le lancement
-    ref.watch(reminderProvider);
-
-    return MaterialApp.router(
-      title: 'EpiTrack',
-      debugShowCheckedModeBanner: false,
-      theme: _buildTheme(),
-      routerConfig: router,
-      builder: (context, child) =>
-          ReminderListener(child: child ?? const SizedBox()),
-      locale: const Locale('fr'),
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [Locale('fr'), Locale('en')],
-    );
+  _RouterNotifier(this._ref) {
+    // Rebuild router redirect whenever auth state changes
+    _ref.listen<AuthState>(authProvider, (_, __) => notifyListeners());
   }
 
-  GoRouter _buildRouter(WidgetRef ref) => GoRouter(
+  String? redirect(BuildContext context, GoRouterState state) {
+    final auth      = _ref.read(authProvider);
+    final isLoading = auth.status == AuthStatus.initial ||
+                      auth.status == AuthStatus.loading;
+    final isLoggedIn = auth.status == AuthStatus.authenticated;
+    final isLogin    = state.matchedLocation == '/login';
+
+    if (isLoading) return null;
+    if (!isLoggedIn && !isLogin) return '/login';
+    if (isLoggedIn && isLogin) {
+      return RoleRouter.redirectForRole(auth.user!.role);
+    }
+    return null;
+  }
+}
+
+// ── Router provider (created once, never recreated) ───────────
+final _routerProvider = Provider<GoRouter>((ref) {
+  final notifier = _RouterNotifier(ref);
+  return GoRouter(
     initialLocation: '/login',
-    redirect: (context, state) {
-      final auth       = ref.read(authProvider);
-      final isLoggedIn = auth.status == AuthStatus.authenticated;
-      final isLogin    = state.matchedLocation == '/login';
-      if (!isLoggedIn && !isLogin) return '/login';
-      if (isLoggedIn && isLogin) {
-        return RoleRouter.redirectForRole(auth.user!.role);
-      }
-      return null;
-    },
+    refreshListenable: notifier,
+    redirect: notifier.redirect,
     routes: [
       GoRoute(
         path: '/login',
@@ -134,8 +132,53 @@ class EpiTrackApp extends ConsumerWidget {
       GoRoute(path: '/doctor/report/:id',
         builder: (_, state) => ReportScreen(
           patientId: state.pathParameters['id']!)),
+
+      // ── Admin ────────────────────────────────────────
+      ShellRoute(
+        builder: (_, __, child) => _AdminShell(child: child),
+        routes: [
+          GoRoute(path: '/admin/dashboard',
+            builder: (_, __) => const AdminDashboardScreen()),
+          GoRoute(path: '/admin/accounts',
+            builder: (_, __) => const AdminAccountsScreen()),
+        ],
+      ),
+      // ── Routes admin hors shell ──────────────────────
+      GoRoute(path: '/admin/create',
+        builder: (_, __) => const AdminCreateAccountScreen()),
+      GoRoute(path: '/admin/user/:id',
+        builder: (_, state) => AdminUserDetailScreen(
+          userId: state.pathParameters['id']!)),
     ],
   );
+});
+
+// ── App ───────────────────────────────────────────────────────
+class EpiTrackApp extends ConsumerWidget {
+  const EpiTrackApp({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(_routerProvider);
+    // Démarrer le scheduler de rappels dès le lancement
+    ref.watch(reminderProvider);
+
+    return MaterialApp.router(
+      title: 'EpiTrack',
+      debugShowCheckedModeBanner: false,
+      theme: _buildTheme(),
+      routerConfig: router,
+      builder: (context, child) =>
+          ReminderListener(child: child ?? const SizedBox()),
+      locale: const Locale('fr'),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('fr'), Locale('en')],
+    );
+  }
 
   ThemeData _buildTheme() => ThemeData(
     useMaterial3: true,
@@ -426,6 +469,49 @@ class _DoctorShell extends StatelessWidget {
               icon: Icon(Icons.settings_outlined),
               selectedIcon: Icon(Icons.settings_rounded),
               label: 'Réglages'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Shell Admin ──────────────────────────────────────────────
+class _AdminShell extends StatelessWidget {
+  final Widget child;
+  const _AdminShell({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final location = GoRouterState.of(context).matchedLocation;
+    final idx = ['/admin/dashboard', '/admin/accounts']
+      .indexOf(location).clamp(0, 1);
+
+    return Scaffold(
+      body: child,
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 24,
+              offset: const Offset(0, -4)),
+          ],
+        ),
+        child: NavigationBar(
+          selectedIndex: idx,
+          onDestinationSelected: (i) => context.go([
+            '/admin/dashboard', '/admin/accounts'][i]),
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.dashboard_outlined),
+              selectedIcon: Icon(Icons.dashboard_rounded),
+              label: 'Tableau de bord'),
+            NavigationDestination(
+              icon: Icon(Icons.manage_accounts_outlined),
+              selectedIcon: Icon(Icons.manage_accounts_rounded),
+              label: 'Comptes'),
           ],
         ),
       ),

@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,14 +6,26 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/epitrack_logo.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/alert_provider.dart';
 
 // ── Provider patients ─────────────────────────────────────────
 final patientsListProvider =
     FutureProvider<List<Map<String, dynamic>>>((ref) async {
-  final odoo = ref.read(odooServiceProvider);
-  final user = ref.read(authProvider).user!;
-  return odoo.fetchMyPatients(user.uid);
+  final snapshot = await FirebaseFirestore.instance
+      .collection('users')
+      .where('role', isEqualTo: 'patient')
+      .get();
+
+  return snapshot.docs.map((doc) {
+    final data = doc.data();
+    return {
+      'id':          doc.id,
+      'name':        data['nom']       ?? 'Inconnu',
+      'age':         data['age']       ?? 0,
+      'status':      data['status']    ?? 'offline',
+      'lastSeizure': data['lastSeizure'] ?? '—',
+      'monthCount':  data['monthCount']  ?? 0,
+    };
+  }).toList();
 });
 
 class PatientsListScreen extends ConsumerStatefulWidget {

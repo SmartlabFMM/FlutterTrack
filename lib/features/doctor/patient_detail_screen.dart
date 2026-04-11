@@ -1,10 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/seizure_provider.dart';
-import '../../services/odoo_service.dart';
 
 class PatientDetailScreen extends ConsumerWidget {
   final String patientId;
@@ -12,8 +14,11 @@ class PatientDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final name   = OdooService.patientName(patientId);
-    final detail = OdooService.patientDetail(patientId) ?? _defaultDetail(name);
+    final patientRaw = ref.watch(patientDataProvider(patientId)).valueOrNull ?? {};
+    final name   = patientRaw['nom'] as String? ?? 'Patient #$patientId';
+    final detail = patientRaw.isNotEmpty
+        ? _mapFirestoreToDetail(patientRaw)
+        : _defaultDetail('Patient #$patientId');
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -37,12 +42,15 @@ class PatientDetailScreen extends ConsumerWidget {
                 delegate: SliverChildListDelegate([
 
                   // ── Infos médicales ──────────────────────
-                  _MedicalInfoCard(detail: detail),
+                  _MedicalInfoCard(
+                    detail: detail,
+                    onEdit: () => _showEditMedicalSheet(context, ref, detail, name),
+                  ),
                   const SizedBox(height: 14),
 
                   // ── Compliance traitement ────────────────
                   _ComplianceCard(
-                    compliance: (detail['compliance'] as num?)?.toDouble() ?? 0.85),
+                    compliance: (detail['compliance'] as num?)?.toDouble()),
                   const SizedBox(height: 14),
 
                   // ── Stats crises ─────────────────────────
@@ -60,6 +68,8 @@ class PatientDetailScreen extends ConsumerWidget {
                     notes: List<Map<String, dynamic>>.from(
                       detail['notes'] as List? ?? []),
                     patientName: name,
+                    patientId: patientId,
+                    ref: ref,
                     context: context,
                   ),
                   const SizedBox(height: 20),
@@ -72,7 +82,7 @@ class PatientDetailScreen extends ConsumerWidget {
                     icon: Icons.monitor_heart_rounded,
                     title: 'Données vitales 24h',
                     subtitle: 'FC · Accéléromètre · GSR en temps réel',
-                    color: AppColors.primary,
+                    color: AppColors.teal,
                     onTap: () => context.push('/doctor/vitals/$patientId')),
                   _DoctorActionTile(
                     icon: Icons.picture_as_pdf_rounded,
@@ -85,19 +95,41 @@ class PatientDetailScreen extends ConsumerWidget {
                     title: 'Ajouter note clinique',
                     subtitle: 'Observations médicales & traitements',
                     color: AppColors.primaryDark,
-                    onTap: () => _showNoteDialog(context, name)),
+                    onTap: () => _showNoteDialog(context, ref, name)),
+                  // RDV : lecture seule (planifié par l'admin)
                   _DoctorActionTile(
                     icon: Icons.calendar_today_rounded,
-                    title: 'Planifier rendez-vous',
-                    subtitle: detail['nextRdv'] as String? ?? 'À définir',
+                    title: 'Prochain rendez-vous',
+                    subtitle: detail['nextRdv'] as String? ?? 'Aucun RDV planifié',
                     color: const Color(0xFF7C3AED),
-                    onTap: () {}),
+                    onTap: null),
                   _DoctorActionTile(
                     icon: Icons.call_rounded,
                     title: 'Appeler le patient',
                     subtitle: detail['phone'] as String? ?? '—',
                     color: AppColors.tealDark,
-                    onTap: () {}),
+                    onTap: () async {
+                      final phone = detail['phone'] as String? ?? '';
+                      if (phone.isEmpty || phone == '—') {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Aucun numéro renseigné'),
+                            behavior: SnackBarBehavior.floating));
+                        return;
+                      }
+                      final uri = Uri(scheme: 'tel',
+                        path: phone.replaceAll(' ', ''));
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri);
+                      } else {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Impossible d\'appeler $phone'),
+                              behavior: SnackBarBehavior.floating));
+                        }
+                      }
+                    }),
                 ]),
               ),
             ),
@@ -107,23 +139,221 @@ class PatientDetailScreen extends ConsumerWidget {
     );
   }
 
-  Map<String, dynamic> _defaultDetail(String name) => {
-    'age': 30, 'gender': 'N/A', 'city': '—',
-    'diagnosis': 'Épilepsie généralisée',
-    'since': 'Suivi récent',
-    'treatment': '—',
-    'phone': '—',
-    'nextRdv': '—',
-    'notes': [],
-    'allergies': '—',
-    'bloodGroup': '—',
-    'weight': '—',
-    'seizureType': '—',
-    'triggers': [],
-    'compliance': 0.80,
+  // ── Helpers ──────────────────────────────────────────────────
+
+  Map<String, dynamic> _mapFirestoreToDetail(Map<String, dynamic> data) => {
+    'age':         data['age']         ?? 30,
+    'gender':      data['gender']      ?? '—',
+    'city':        data['city']        ?? '—',
+    'diagnosis':   data['diagnosis']   ?? '',
+    'since':       data['since']       ?? 'Suivi récent',
+    'treatment':   data['treatment']   ?? '',
+    'phone':       data['phone']       ?? '',
+    'nextRdv':     data['nextRdv']     ?? '',
+    'notes':       data['notes']       ?? [],
+    'allergies':   data['allergies']   ?? '',
+    'bloodGroup':  data['bloodGroup']  ?? '',
+    'weight':      data['weight']      ?? '',
+    'seizureType': data['seizureType'] ?? '',
+    'triggers':    data['triggers']    ?? [],
+    'compliance':  (data['compliance'] as num?)?.toDouble(),
   };
 
-  void _showNoteDialog(BuildContext context, String patientName) {
+  Map<String, dynamic> _defaultDetail(String name) => {
+    'age': 30, 'gender': 'N/A', 'city': '—',
+    'diagnosis': '', 'since': 'Suivi récent',
+    'treatment': '', 'phone': '', 'nextRdv': '',
+    'notes': [], 'allergies': '', 'bloodGroup': '',
+    'weight': '', 'seizureType': '', 'triggers': [],
+    'compliance': null,
+  };
+
+  // ── Infos médicales éditables ────────────────────────────────
+  void _showEditMedicalSheet(
+      BuildContext context, WidgetRef ref,
+      Map<String, dynamic> detail, String name) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _EditMedicalSheet(
+        patientId: patientId,
+        detail: detail,
+        patientName: name,
+        onSaved: () => ref.invalidate(patientDataProvider(patientId)),
+      ),
+    );
+  }
+
+  // ── Infos personnelles éditables ─────────────────────────────
+  void _showEditPersonalSheet(
+      BuildContext context, WidgetRef ref,
+      Map<String, dynamic> raw, String name) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _EditPersonalSheet(
+        patientId: patientId,
+        raw: raw,
+        patientName: name,
+        onSaved: () => ref.invalidate(patientDataProvider(patientId)),
+      ),
+    );
+  }
+
+  // ── Rendez-vous ───────────────────────────────────────────────
+  void _showRdvSheet(BuildContext context, WidgetRef ref, String current) {
+    DateTime selected = DateTime.now().add(const Duration(days: 7));
+    final timeCtrl = TextEditingController(text: '09:00');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBorder,
+                    borderRadius: BorderRadius.circular(2)))),
+                const SizedBox(height: 16),
+                Row(children: [
+                  Container(
+                    width: 36, height: 36,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEDE9FE),
+                      borderRadius: BorderRadius.circular(10)),
+                    child: const Icon(Icons.calendar_today_rounded,
+                      color: Color(0xFF7C3AED), size: 18)),
+                  const SizedBox(width: 12),
+                  const Text('Planifier un rendez-vous',
+                    style: TextStyle(fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary)),
+                ]),
+                const SizedBox(height: 20),
+                // Date picker inline
+                GestureDetector(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: selected,
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      locale: const Locale('fr'),
+                    );
+                    if (picked != null) setSheetState(() => selected = picked);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEDE9FE),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFF7C3AED).withValues(alpha: 0.4))),
+                    child: Row(children: [
+                      const Icon(Icons.calendar_month_rounded,
+                        color: Color(0xFF7C3AED), size: 20),
+                      const SizedBox(width: 12),
+                      Text(
+                        '${_dayName(selected.weekday)} '
+                        '${selected.day} ${_monthName(selected.month)} '
+                        '${selected.year}',
+                        style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w700,
+                          color: Color(0xFF7C3AED))),
+                      const Spacer(),
+                      const Icon(Icons.edit_rounded,
+                        color: Color(0xFF7C3AED), size: 14),
+                    ]),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Heure
+                TextField(
+                  controller: timeCtrl,
+                  keyboardType: TextInputType.datetime,
+                  decoration: InputDecoration(
+                    labelText: 'Heure (ex: 09:00)',
+                    prefixIcon: Container(
+                      margin: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEDE9FE),
+                        borderRadius: BorderRadius.circular(8)),
+                      child: const Icon(Icons.access_time_rounded,
+                        color: Color(0xFF7C3AED), size: 16)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () async {
+                    final label =
+                      '${_dayName(selected.weekday)} ${selected.day} '
+                      '${_monthName(selected.month)} · ${timeCtrl.text.trim()}';
+                    await FirebaseFirestore.instance
+                        .collection('users').doc(patientId)
+                        .update({'nextRdv': label});
+                    ref.invalidate(patientDataProvider(patientId));
+                    if (ctx.mounted) {
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text('RDV planifié : $label'),
+                        backgroundColor: const Color(0xFF7C3AED),
+                        behavior: SnackBarBehavior.floating,
+                      ));
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 52),
+                    backgroundColor: const Color(0xFF7C3AED),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14))),
+                  child: const Text('Confirmer le rendez-vous',
+                    style: TextStyle(fontSize: 16,
+                      fontWeight: FontWeight.w700, color: Colors.white)),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 48),
+                    side: const BorderSide(color: AppColors.cardBorder),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14))),
+                  child: const Text('Annuler',
+                    style: TextStyle(color: AppColors.textSecondary)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _dayName(int w) => const ['', 'Lundi', 'Mardi', 'Mercredi',
+    'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'][w];
+
+  String _monthName(int m) => const ['', 'jan.', 'fév.', 'mars', 'avr.',
+    'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'][m];
+
+  // ── Note clinique ─────────────────────────────────────────────
+  void _showNoteDialog(BuildContext context, WidgetRef ref, String patientName) {
     final ctrl = TextEditingController();
     showModalBottomSheet(
       context: context,
@@ -193,13 +423,37 @@ class PatientDetailScreen extends ConsumerWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Note clinique enregistrée'),
-                          backgroundColor: AppColors.teal,
-                          behavior: SnackBarBehavior.floating));
+                    onPressed: () async {
+                      final text = ctrl.text.trim();
+                      if (text.isEmpty) return;
+                      final dateLabel = DateFormat('dd MMM yyyy', 'fr').format(DateTime.now());
+                      try {
+                        await FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(patientId)
+                            .set({
+                          'notes': FieldValue.arrayUnion([
+                            {'date': dateLabel, 'text': text}
+                          ])
+                        }, SetOptions(merge: true));
+                        ref.invalidate(patientDataProvider(patientId));
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Note clinique enregistrée'),
+                              backgroundColor: AppColors.teal,
+                              behavior: SnackBarBehavior.floating));
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Erreur : $e'),
+                              backgroundColor: AppColors.danger,
+                              behavior: SnackBarBehavior.floating));
+                        }
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size(0, 48),
@@ -216,6 +470,411 @@ class PatientDetailScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+// ─── Formulaire infos médicales ──────────────────────────────
+class _EditMedicalSheet extends StatefulWidget {
+  final String               patientId;
+  final Map<String, dynamic> detail;
+  final String               patientName;
+  final VoidCallback         onSaved;
+  const _EditMedicalSheet({
+    required this.patientId, required this.detail,
+    required this.patientName, required this.onSaved,
+  });
+  @override
+  State<_EditMedicalSheet> createState() => _EditMedicalSheetState();
+}
+
+class _EditMedicalSheetState extends State<_EditMedicalSheet> {
+  final _formKey = GlobalKey<FormState>();
+  bool _saving   = false;
+
+  late final TextEditingController _treatment;
+  late final TextEditingController _seizureType;
+  late final TextEditingController _bloodGroup;
+  late final TextEditingController _weight;
+  late final TextEditingController _allergies;
+
+  @override
+  void initState() {
+    super.initState();
+    final d = widget.detail;
+    _treatment   = TextEditingController(text: d['treatment']   as String? ?? '');
+    _seizureType = TextEditingController(text: d['seizureType'] as String? ?? '');
+    _bloodGroup  = TextEditingController(text: d['bloodGroup']  as String? ?? '');
+    _weight      = TextEditingController(text: d['weight']      as String? ?? '');
+    _allergies   = TextEditingController(text: d['allergies']   as String? ?? '');
+  }
+
+  @override
+  void dispose() {
+    for (final c in [_treatment, _seizureType, _bloodGroup, _weight, _allergies]) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _saving = true);
+    await FirebaseFirestore.instance
+        .collection('users').doc(widget.patientId).update({
+      'treatment':   _treatment.text.trim(),
+      'seizureType': _seizureType.text.trim(),
+      'bloodGroup':  _bloodGroup.text.trim(),
+      'weight':      _weight.text.trim(),
+      'allergies':   _allergies.text.trim(),
+    });
+    widget.onSaved();
+    if (mounted) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Informations médicales mises à jour'),
+        backgroundColor: AppColors.teal,
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.70,
+      maxChildSize: 0.90,
+      minChildSize: 0.5,
+      builder: (_, ctrl) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        child: Column(children: [
+          Container(
+            width: 40, height: 4,
+            margin: const EdgeInsets.only(top: 12),
+            decoration: BoxDecoration(
+              color: AppColors.cardBorder,
+              borderRadius: BorderRadius.circular(2))),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(children: [
+              Container(
+                width: 36, height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryPale,
+                  borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.medical_information_rounded,
+                  color: AppColors.primary, size: 20)),
+              const SizedBox(width: 12),
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Informations médicales',
+                  style: TextStyle(fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary)),
+                Text(widget.patientName,
+                  style: const TextStyle(
+                    fontSize: 12, color: AppColors.textSecondary)),
+              ]),
+            ]),
+          ),
+          const SizedBox(height: 8),
+          const Divider(height: 1, color: AppColors.cardBorder),
+          Expanded(
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                controller: ctrl,
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                children: [
+                  _field('Traitement en cours', Icons.medication_rounded, _treatment,
+                    hint: 'Ex: Valproate 500mg · 2×/j'),
+                  _field('Type de crise', Icons.bolt_rounded, _seizureType,
+                    hint: 'Ex: Tonico-clonique · Grand mal'),
+                  _field('Groupe sanguin', Icons.bloodtype_rounded, _bloodGroup,
+                    hint: 'Ex: A+'),
+                  _field('Poids', Icons.monitor_weight_rounded, _weight,
+                    hint: 'Ex: 74 kg'),
+                  _field('Allergies', Icons.warning_amber_rounded, _allergies,
+                    hint: 'Ex: Pénicilline'),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _saving ? null : _save,
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 52),
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14))),
+                    child: _saving
+                      ? const SizedBox(width: 22, height: 22,
+                          child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2.5))
+                      : const Text('Enregistrer',
+                          style: TextStyle(fontSize: 16,
+                            fontWeight: FontWeight.w700, color: Colors.white)),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                      side: const BorderSide(color: AppColors.cardBorder),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14))),
+                    child: const Text('Annuler',
+                      style: TextStyle(color: AppColors.textSecondary)),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _field(
+    String label, IconData icon, TextEditingController ctrl, {
+    String hint = '', TextInputType keyboardType = TextInputType.text,
+  }) => Padding(
+    padding: const EdgeInsets.only(bottom: 14),
+    child: TextFormField(
+      controller: ctrl,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Container(
+          margin: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: AppColors.primaryPale,
+            borderRadius: BorderRadius.circular(8)),
+          child: Icon(icon, color: AppColors.primary, size: 16)),
+      ),
+    ),
+  );
+}
+
+// ─── Formulaire infos personnelles ───────────────────────────
+class _EditPersonalSheet extends StatefulWidget {
+  final String              patientId;
+  final Map<String, dynamic> raw;
+  final String              patientName;
+  final VoidCallback        onSaved;
+  const _EditPersonalSheet({
+    required this.patientId, required this.raw,
+    required this.patientName, required this.onSaved,
+  });
+  @override
+  State<_EditPersonalSheet> createState() => _EditPersonalSheetState();
+}
+
+class _EditPersonalSheetState extends State<_EditPersonalSheet> {
+  final _formKey = GlobalKey<FormState>();
+  bool _saving   = false;
+
+  late final TextEditingController _nom;
+  late final TextEditingController _prenom;
+  late final TextEditingController _age;
+  late final TextEditingController _phone;
+  late final TextEditingController _city;
+  late final TextEditingController _address;
+  late final TextEditingController _gender;
+
+  @override
+  void initState() {
+    super.initState();
+    final d = widget.raw;
+    // nom complet peut être stocké dans 'nom' ou séparé en 'prenom'+'nom'
+    final fullName = d['nom'] as String? ?? '';
+    final parts    = fullName.split(' ');
+    _prenom  = TextEditingController(text: parts.isNotEmpty ? parts.first : '');
+    _nom     = TextEditingController(
+        text: parts.length > 1 ? parts.sublist(1).join(' ') : '');
+    _age     = TextEditingController(
+        text: d['age'] != null ? '${d['age']}' : '');
+    _phone   = TextEditingController(text: d['phone']   as String? ?? '');
+    _city    = TextEditingController(text: d['city']    as String? ?? '');
+    _address = TextEditingController(text: d['address'] as String? ?? '');
+    _gender  = TextEditingController(text: d['gender']  as String? ?? '');
+  }
+
+  @override
+  void dispose() {
+    for (final c in [_nom, _prenom, _age, _phone, _city, _address, _gender]) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _saving = true);
+    final fullName = '${_prenom.text.trim()} ${_nom.text.trim()}'.trim();
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.patientId)
+        .update({
+      'nom':     fullName,
+      'age':     int.tryParse(_age.text.trim()) ?? 0,
+      'phone':   _phone.text.trim(),
+      'city':    _city.text.trim(),
+      'address': _address.text.trim(),
+      'gender':  _gender.text.trim(),
+    });
+    widget.onSaved();
+    if (mounted) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Informations personnelles mises à jour'),
+        backgroundColor: AppColors.teal,
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      maxChildSize: 0.92,
+      minChildSize: 0.5,
+      builder: (_, ctrl) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        child: Column(children: [
+          Container(
+            width: 40, height: 4,
+            margin: const EdgeInsets.only(top: 12),
+            decoration: BoxDecoration(
+              color: AppColors.cardBorder,
+              borderRadius: BorderRadius.circular(2))),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(children: [
+              Container(
+                width: 36, height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryPale,
+                  borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.person_rounded,
+                  color: AppColors.primary, size: 20)),
+              const SizedBox(width: 12),
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Informations personnelles',
+                  style: TextStyle(fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary)),
+                Text(widget.patientName,
+                  style: const TextStyle(
+                    fontSize: 12, color: AppColors.textSecondary)),
+              ]),
+            ]),
+          ),
+          const SizedBox(height: 8),
+          const Divider(height: 1, color: AppColors.cardBorder),
+          Expanded(
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                controller: ctrl,
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                children: [
+                  Row(children: [
+                    Expanded(child: _field('Prénom',
+                      Icons.badge_rounded, _prenom,
+                      hint: 'Ahmed', required: true)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _field('Nom',
+                      Icons.badge_rounded, _nom,
+                      hint: 'Ben Ali', required: true)),
+                  ]),
+                  Row(children: [
+                    Expanded(child: _field('Âge',
+                      Icons.cake_rounded, _age,
+                      hint: '28',
+                      keyboardType: TextInputType.number)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _field('Genre',
+                      Icons.wc_rounded, _gender,
+                      hint: 'Homme / Femme')),
+                  ]),
+                  _field('Téléphone',
+                    Icons.call_rounded, _phone,
+                    hint: '+216 71 XXX XXX',
+                    keyboardType: TextInputType.phone),
+                  _field('Ville',
+                    Icons.location_city_rounded, _city,
+                    hint: 'Tunis'),
+                  _field('Adresse',
+                    Icons.home_rounded, _address,
+                    hint: 'Rue, quartier…'),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _saving ? null : _save,
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 52),
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14))),
+                    child: _saving
+                      ? const SizedBox(width: 22, height: 22,
+                          child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2.5))
+                      : const Text('Enregistrer',
+                          style: TextStyle(fontSize: 16,
+                            fontWeight: FontWeight.w700, color: Colors.white)),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                      side: const BorderSide(color: AppColors.cardBorder),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14))),
+                    child: const Text('Annuler',
+                      style: TextStyle(color: AppColors.textSecondary)),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _field(
+    String label, IconData icon, TextEditingController ctrl, {
+    String hint = '',
+    TextInputType keyboardType = TextInputType.text,
+    bool required = false,
+  }) => Padding(
+    padding: const EdgeInsets.only(bottom: 14),
+    child: TextFormField(
+      controller: ctrl,
+      keyboardType: keyboardType,
+      validator: required
+        ? (v) => (v == null || v.trim().isEmpty) ? 'Requis' : null
+        : null,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Container(
+          margin: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: AppColors.primaryPale,
+            borderRadius: BorderRadius.circular(8)),
+          child: Icon(icon, color: AppColors.primary, size: 16)),
+      ),
+    ),
+  );
 }
 
 // ─── Hero dossier patient ─────────────────────────────────────
@@ -356,13 +1015,30 @@ class _PatientHero extends StatelessWidget {
 // ─── Informations médicales ───────────────────────────────────
 class _MedicalInfoCard extends StatelessWidget {
   final Map<String, dynamic> detail;
-  const _MedicalInfoCard({required this.detail});
+  final VoidCallback          onEdit;
+  const _MedicalInfoCard({required this.detail, required this.onEdit});
 
   @override
   Widget build(BuildContext context) => _SectionCard(
     title: 'Informations médicales',
     icon: Icons.medical_information_rounded,
     iconColor: AppColors.primary,
+    action: GestureDetector(
+      onTap: onEdit,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppColors.primaryPale,
+          borderRadius: BorderRadius.circular(20)),
+        child: const Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.edit_rounded, size: 12, color: AppColors.primary),
+          SizedBox(width: 4),
+          Text('Modifier', style: TextStyle(
+            fontSize: 11, fontWeight: FontWeight.w700,
+            color: AppColors.primary)),
+        ]),
+      ),
+    ),
     child: Column(children: [
       _InfoRow(icon: Icons.medication_rounded,
         label: 'Traitement',
@@ -394,12 +1070,21 @@ class _MedicalInfoCard extends StatelessWidget {
 
 // ─── Compliance traitement ────────────────────────────────────
 class _ComplianceCard extends StatelessWidget {
-  final double compliance;
+  final double? compliance;
   const _ComplianceCard({required this.compliance});
 
   @override
   Widget build(BuildContext context) {
-    final pct   = (compliance * 100).round();
+    if (compliance == null) {
+      return _SectionCard(
+        title: 'Compliance au traitement',
+        icon: Icons.task_alt_rounded,
+        iconColor: AppColors.textHint,
+        child: const Text('Aucune donnée — le patient n\'a pas encore utilisé l\'app',
+          style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+      );
+    }
+    final pct   = (compliance! * 100).round();
     final color = pct >= 90 ? AppColors.teal
                 : pct >= 70 ? AppColors.warning
                 : AppColors.seizureRed;
@@ -434,7 +1119,7 @@ class _ComplianceCard extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(6),
           child: LinearProgressIndicator(
-            value: compliance,
+            value: compliance!,
             minHeight: 10,
             backgroundColor: AppColors.cardBorder,
             valueColor: AlwaysStoppedAnimation<Color>(color),
@@ -547,10 +1232,40 @@ class _TriggersCard extends StatelessWidget {
 class _ClinicalNotesCard extends StatelessWidget {
   final List<Map<String, dynamic>> notes;
   final String patientName;
+  final String patientId;
+  final WidgetRef ref;
   final BuildContext context;
   const _ClinicalNotesCard({
     required this.notes, required this.patientName,
+    required this.patientId, required this.ref,
     required this.context});
+
+  Future<void> _deleteNote(Map<String, dynamic> note) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Supprimer la note ?'),
+        content: Text('"${note['text']}"',
+          style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            child: const Text('Supprimer')),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(patientId)
+        .set({'notes': FieldValue.arrayRemove([note])},
+             SetOptions(merge: true));
+    ref.invalidate(patientDataProvider(patientId));
+  }
 
   @override
   Widget build(BuildContext _) => _SectionCard(
@@ -600,6 +1315,15 @@ class _ClinicalNotesCard extends StatelessWidget {
                   ),
                 ),
               ),
+              // Bouton supprimer
+              IconButton(
+                icon: const Icon(Icons.delete_outline_rounded,
+                  size: 18, color: AppColors.danger),
+                tooltip: 'Supprimer',
+                onPressed: () => _deleteNote(n),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
             ],
           );
         }).toList()),
@@ -619,12 +1343,13 @@ class _SectionLabel extends StatelessWidget {
 }
 
 class _SectionCard extends StatelessWidget {
-  final String  title;
+  final String   title;
   final IconData icon;
-  final Color   iconColor;
-  final Widget  child;
+  final Color    iconColor;
+  final Widget   child;
+  final Widget?  action;
   const _SectionCard({required this.title, required this.icon,
-    required this.iconColor, required this.child});
+    required this.iconColor, required this.child, this.action});
 
   @override
   Widget build(BuildContext context) => Container(
@@ -653,6 +1378,10 @@ class _SectionCard extends StatelessWidget {
           Text(title, style: const TextStyle(
             fontSize: 13, fontWeight: FontWeight.w700,
             color: AppColors.textPrimary)),
+          if (action != null) ...[
+            const Spacer(),
+            action!,
+          ],
         ]),
         const SizedBox(height: 14),
         child,
@@ -733,9 +1462,9 @@ class _DoctorActionTile extends StatelessWidget {
   final IconData icon;
   final String   title, subtitle;
   final Color    color;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   const _DoctorActionTile({required this.icon, required this.title,
-    required this.subtitle, required this.color, required this.onTap});
+    required this.subtitle, required this.color, this.onTap});
 
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -744,7 +1473,7 @@ class _DoctorActionTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: onTap == null ? AppColors.surfaceAlt : AppColors.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.cardBorder),
         boxShadow: [

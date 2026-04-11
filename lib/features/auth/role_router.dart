@@ -6,6 +6,7 @@ class RoleRouter {
       UserRole.patient => '/patient/dashboard',
       UserRole.family  => '/family/dashboard',
       UserRole.doctor  => '/doctor/patients',
+      UserRole.admin   => '/admin/dashboard',
     };
   }
 }

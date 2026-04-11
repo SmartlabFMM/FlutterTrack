@@ -11,6 +11,7 @@ import '../../models/seizure_model.dart';
 import '../../providers/ble_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/seizure_provider.dart';
+import '../../providers/rdv_provider.dart';
 
 // ── Données aperçu habitudes (dashboard) ─────────────────────
 const _habitPreviews = [
@@ -40,12 +41,13 @@ class PatientDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final ble    = ref.watch(bleProvider);
-    final auth   = ref.watch(authProvider);
-    final uid    = auth.user!.uid.toString();
-    final latest = ref.watch(latestSeizureProvider(uid));
+    final ble       = ref.watch(bleProvider);
+    final auth      = ref.watch(authProvider);
+    final uid       = auth.user!.uid.toString();
+    final latest    = ref.watch(latestSeizureProvider(uid));
     final seizureList = ref.watch(seizureListProvider(uid));
     final firstName = auth.user!.name.split(' ').first;
+    final nextRdv   = ref.watch(nextRdvProvider(uid)).value;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -96,6 +98,13 @@ class PatientDashboardScreen extends ConsumerWidget {
                       error: (_, __) => const SizedBox(),
                     ),
                     const SizedBox(height: 20),
+
+                    // ── Prochain RDV ─────────────────────────
+                    if (nextRdv != null && nextRdv.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      _NextRdvCard(rdv: nextRdv),
+                    ],
+                    const SizedBox(height: 12),
 
                     // ── Bouton SOS ───────────────────────────
                     const SosButton(),
@@ -711,6 +720,48 @@ class _MlScoreCard extends StatelessWidget {
       ]),
     );
   }
+}
+
+// ─── Prochain RDV ─────────────────────────────────────────────
+class _NextRdvCard extends StatelessWidget {
+  final String rdv;
+  const _NextRdvCard({required this.rdv});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+      boxShadow: [
+        BoxShadow(
+          color: AppColors.primary.withValues(alpha: 0.07),
+          blurRadius: 14,
+          offset: const Offset(0, 4)),
+      ],
+    ),
+    child: Row(children: [
+      Container(
+        width: 44, height: 44,
+        decoration: BoxDecoration(
+          color: AppColors.primaryPale,
+          borderRadius: BorderRadius.circular(12)),
+        child: const Icon(Icons.calendar_today_rounded,
+          color: AppColors.primary, size: 20)),
+      const SizedBox(width: 14),
+      Expanded(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Prochain rendez-vous',
+            style: TextStyle(fontSize: 11,
+              color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+          Text(rdv,
+            style: const TextStyle(fontSize: 15,
+              fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+        ]),
+      ),
+    ]),
+  );
 }
 
 // ─── Aperçu habitudes (dashboard) ────────────────────────────

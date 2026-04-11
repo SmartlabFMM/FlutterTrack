@@ -7,7 +7,7 @@ import '../../core/widgets/epitrack_logo.dart';
 import '../../models/user_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/consent_provider.dart';
-import '../../services/odoo_service.dart';
+
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -23,8 +23,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
   final _passCtrl    = TextEditingController();
   final _confirmCtrl = TextEditingController();
 
-  UserRole _role            = UserRole.patient;
-  String?  _linkedPatientId;  // pour la famille
+  final UserRole _role      = UserRole.family;
+  String?  _linkedPatientId;
   bool _obscure1            = true;
   bool _obscure2            = true;
 
@@ -93,6 +93,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
     UserRole.patient => '/patient/dashboard',
     UserRole.family  => '/family/dashboard',
     UserRole.doctor  => '/doctor/patients',
+    UserRole.admin   => '/admin/dashboard',
   };
 
   @override
@@ -185,43 +186,33 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
 
-                                // ── Sélecteur de rôle ─────────────
-                                const Text('Je suis…',
-                                  style: TextStyle(
-                                    fontSize: 13, fontWeight: FontWeight.w700,
-                                    color: AppColors.textSecondary)),
-                                const SizedBox(height: 10),
-                                Row(children: [
-                                  _RoleChip(
-                                    label: 'Patient',
-                                    icon: Icons.person_rounded,
-                                    role: UserRole.patient,
-                                    selected: _role == UserRole.patient,
-                                    onTap: () => setState(() {
-                                      _role = UserRole.patient;
-                                      _linkedPatientId = null;
-                                    })),
-                                  const SizedBox(width: 8),
-                                  _RoleChip(
-                                    label: 'Famille',
-                                    icon: Icons.family_restroom_rounded,
-                                    role: UserRole.family,
-                                    selected: _role == UserRole.family,
-                                    onTap: () => setState(() {
-                                      _role = UserRole.family;
-                                      _linkedPatientId = null;
-                                    })),
-                                  const SizedBox(width: 8),
-                                  _RoleChip(
-                                    label: 'Médecin',
-                                    icon: Icons.medical_services_rounded,
-                                    role: UserRole.doctor,
-                                    selected: _role == UserRole.doctor,
-                                    onTap: () => setState(() {
-                                      _role = UserRole.doctor;
-                                      _linkedPatientId = null;
-                                    })),
-                                ]),
+                                // ── Sélecteur de rôle (famille uniquement) ─
+                                Container(
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryPale,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.2))),
+                                  child: Row(children: [
+                                    const Icon(Icons.family_restroom_rounded,
+                                      color: AppColors.primary, size: 20),
+                                    const SizedBox(width: 10),
+                                    const Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('Compte Famille',
+                                            style: TextStyle(
+                                              fontSize: 13, fontWeight: FontWeight.w700,
+                                              color: AppColors.primary)),
+                                          Text('Les comptes patients et médecins sont créés par l\'administrateur.',
+                                            style: TextStyle(
+                                              fontSize: 11, color: AppColors.textSecondary)),
+                                        ],
+                                      ),
+                                    ),
+                                  ]),
+                                ),
                                 const SizedBox(height: 20),
 
                                 // ── Patient lié (famille seulement) ─
@@ -401,7 +392,7 @@ class _PatientPicker extends StatelessWidget {
   final ValueChanged<String> onSelected;
   const _PatientPicker({required this.selectedId, required this.onSelected});
 
-  static final _patients = OdooService.allPatients();
+  static final _patients = <Map<String, String>>[];
 
   @override
   Widget build(BuildContext context) {
