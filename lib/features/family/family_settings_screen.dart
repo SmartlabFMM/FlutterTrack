@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/epitrack_logo.dart';
 import '../../models/reminder_model.dart';
@@ -17,7 +18,7 @@ class FamilySettingsScreen extends ConsumerWidget {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: Colors.transparent,
         body: CustomScrollView(
           slivers: [
 
@@ -38,6 +39,19 @@ class FamilySettingsScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(children: [
+                          GestureDetector(
+                            onTap: () => context.go('/family/dashboard'),
+                            child: Container(
+                              width: 36, height: 36,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.2))),
+                              child: const Icon(Icons.arrow_back_rounded,
+                                color: Colors.white, size: 18)),
+                          ),
+                          const SizedBox(width: 10),
                           Container(
                             width: 42, height: 42,
                             decoration: BoxDecoration(

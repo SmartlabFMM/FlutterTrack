@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/seizure_provider.dart';
+import '../../providers/prodrome_provider.dart';
 
 class PatientDetailScreen extends ConsumerWidget {
   final String patientId;
@@ -23,7 +24,7 @@ class PatientDetailScreen extends ConsumerWidget {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: Colors.transparent,
         body: CustomScrollView(
           slivers: [
             // ── Hero dossier ─────────────────────────────
@@ -63,6 +64,10 @@ class PatientDetailScreen extends ConsumerWidget {
                       detail['triggers'] as List? ?? [])),
                   const SizedBox(height: 14),
 
+                  // ── Prodromes (lecture seule) ─────────────
+                  _ProdromesDoctorCard(patientId: patientId),
+                  const SizedBox(height: 14),
+
                   // ── Notes cliniques ──────────────────────
                   _ClinicalNotesCard(
                     notes: List<Map<String, dynamic>>.from(
@@ -96,6 +101,13 @@ class PatientDetailScreen extends ConsumerWidget {
                     subtitle: 'Observations médicales & traitements',
                     color: AppColors.primaryDark,
                     onTap: () => _showNoteDialog(context, ref, name)),
+                  // Infos personnelles : lecture seule
+                  _DoctorActionTile(
+                    icon: Icons.person_rounded,
+                    title: 'Informations personnelles',
+                    subtitle: 'Âge, téléphone, adresse',
+                    color: AppColors.primary,
+                    onTap: () => _showPersonalInfoSheet(context, detail)),
                   // RDV : lecture seule (planifié par l'admin)
                   _DoctorActionTile(
                     icon: Icons.calendar_today_rounded,
@@ -149,6 +161,7 @@ class PatientDetailScreen extends ConsumerWidget {
     'since':       data['since']       ?? 'Suivi récent',
     'treatment':   data['treatment']   ?? '',
     'phone':       data['phone']       ?? '',
+    'address':     data['address']     ?? '',
     'nextRdv':     data['nextRdv']     ?? '',
     'notes':       data['notes']       ?? [],
     'allergies':   data['allergies']   ?? '',
@@ -162,7 +175,7 @@ class PatientDetailScreen extends ConsumerWidget {
   Map<String, dynamic> _defaultDetail(String name) => {
     'age': 30, 'gender': 'N/A', 'city': '—',
     'diagnosis': '', 'since': 'Suivi récent',
-    'treatment': '', 'phone': '', 'nextRdv': '',
+    'treatment': '', 'phone': '', 'address': '', 'nextRdv': '',
     'notes': [], 'allergies': '', 'bloodGroup': '',
     'weight': '', 'seizureType': '', 'triggers': [],
     'compliance': null,
@@ -202,155 +215,73 @@ class PatientDetailScreen extends ConsumerWidget {
     );
   }
 
-  // ── Rendez-vous ───────────────────────────────────────────────
-  void _showRdvSheet(BuildContext context, WidgetRef ref, String current) {
-    DateTime selected = DateTime.now().add(const Duration(days: 7));
-    final timeCtrl = TextEditingController(text: '09:00');
-
+  // ── Infos personnelles lecture seule ────────────────────────────
+  void _showPersonalInfoSheet(
+      BuildContext context, Map<String, dynamic> detail) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom),
-          child: Container(
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(child: Container(
-                  width: 40, height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBorder,
-                    borderRadius: BorderRadius.circular(2)))),
-                const SizedBox(height: 16),
-                Row(children: [
-                  Container(
-                    width: 36, height: 36,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEDE9FE),
-                      borderRadius: BorderRadius.circular(10)),
-                    child: const Icon(Icons.calendar_today_rounded,
-                      color: Color(0xFF7C3AED), size: 18)),
-                  const SizedBox(width: 12),
-                  const Text('Planifier un rendez-vous',
-                    style: TextStyle(fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary)),
-                ]),
-                const SizedBox(height: 20),
-                // Date picker inline
-                GestureDetector(
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: ctx,
-                      initialDate: selected,
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                      locale: const Locale('fr'),
-                    );
-                    if (picked != null) setSheetState(() => selected = picked);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEDE9FE),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: const Color(0xFF7C3AED).withValues(alpha: 0.4))),
-                    child: Row(children: [
-                      const Icon(Icons.calendar_month_rounded,
-                        color: Color(0xFF7C3AED), size: 20),
-                      const SizedBox(width: 12),
-                      Text(
-                        '${_dayName(selected.weekday)} '
-                        '${selected.day} ${_monthName(selected.month)} '
-                        '${selected.year}',
-                        style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w700,
-                          color: Color(0xFF7C3AED))),
-                      const Spacer(),
-                      const Icon(Icons.edit_rounded,
-                        color: Color(0xFF7C3AED), size: 14),
-                    ]),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Heure
-                TextField(
-                  controller: timeCtrl,
-                  keyboardType: TextInputType.datetime,
-                  decoration: InputDecoration(
-                    labelText: 'Heure (ex: 09:00)',
-                    prefixIcon: Container(
-                      margin: const EdgeInsets.all(10),
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEDE9FE),
-                        borderRadius: BorderRadius.circular(8)),
-                      child: const Icon(Icons.access_time_rounded,
-                        color: Color(0xFF7C3AED), size: 16)),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () async {
-                    final label =
-                      '${_dayName(selected.weekday)} ${selected.day} '
-                      '${_monthName(selected.month)} · ${timeCtrl.text.trim()}';
-                    await FirebaseFirestore.instance
-                        .collection('users').doc(patientId)
-                        .update({'nextRdv': label});
-                    ref.invalidate(patientDataProvider(patientId));
-                    if (ctx.mounted) {
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text('RDV planifié : $label'),
-                        backgroundColor: const Color(0xFF7C3AED),
-                        behavior: SnackBarBehavior.floating,
-                      ));
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 52),
-                    backgroundColor: const Color(0xFF7C3AED),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14))),
-                  child: const Text('Confirmer le rendez-vous',
-                    style: TextStyle(fontSize: 16,
-                      fontWeight: FontWeight.w700, color: Colors.white)),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 48),
-                    side: const BorderSide(color: AppColors.cardBorder),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14))),
-                  child: const Text('Annuler',
-                    style: TextStyle(color: AppColors.textSecondary)),
-                ),
-              ],
-            ),
-          ),
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(child: Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.cardBorder,
+                borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 16),
+            Row(children: [
+              Container(
+                width: 36, height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryPale,
+                  borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.person_rounded,
+                  color: AppColors.primary, size: 20)),
+              const SizedBox(width: 12),
+              const Text('Informations personnelles',
+                style: TextStyle(fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary)),
+            ]),
+            const SizedBox(height: 16),
+            _infoRow(Icons.cake_rounded, 'Âge',
+              detail['age']?.toString() ?? '—'),
+            _infoRow(Icons.call_rounded, 'Téléphone',
+              detail['phone'] as String? ?? '—'),
+            _infoRow(Icons.location_on_rounded, 'Adresse',
+              detail['address'] as String? ?? '—'),
+            _infoRow(Icons.wc_rounded, 'Sexe',
+              detail['gender'] as String? ?? '—'),
+            const SizedBox(height: 8),
+          ],
         ),
       ),
     );
   }
 
-  String _dayName(int w) => const ['', 'Lundi', 'Mardi', 'Mercredi',
-    'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'][w];
-
-  String _monthName(int m) => const ['', 'jan.', 'fév.', 'mars', 'avr.',
-    'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'][m];
+  Widget _infoRow(IconData icon, String label, String value) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Row(children: [
+      Icon(icon, size: 18, color: AppColors.primary),
+      const SizedBox(width: 12),
+      Text('$label : ',
+        style: const TextStyle(
+          fontSize: 13, color: AppColors.textSecondary,
+          fontWeight: FontWeight.w500)),
+      Expanded(child: Text(value,
+        style: const TextStyle(
+          fontSize: 13, color: AppColors.textPrimary,
+          fontWeight: FontWeight.w600))),
+    ]),
+  );
 
   // ── Note clinique ─────────────────────────────────────────────
   void _showNoteDialog(BuildContext context, WidgetRef ref, String patientName) {
@@ -1516,4 +1447,115 @@ class _DoctorActionTile extends StatelessWidget {
       ]),
     ),
   );
+}
+
+// ─── Prodromes (lecture seule médecin) ───────────────────────
+class _ProdromesDoctorCard extends ConsumerWidget {
+  final String patientId;
+  const _ProdromesDoctorCard({required this.patientId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final prodromes = ref.watch(prodromeProvider(patientId));
+
+    return prodromes.when(
+      loading: () => const SizedBox(),
+      error:   (_, __) => const SizedBox(),
+      data: (list) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.cardBorder)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Container(
+                  width: 34, height: 34,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEDE9FE),
+                    borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.warning_amber_rounded,
+                    color: Color(0xFF7C3AED), size: 17)),
+                const SizedBox(width: 10),
+                const Text('Prodromes signalés',
+                  style: TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary)),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEDE9FE),
+                    borderRadius: BorderRadius.circular(20)),
+                  child: Text('${list.length}',
+                    style: const TextStyle(
+                      fontSize: 11, fontWeight: FontWeight.w700,
+                      color: Color(0xFF7C3AED)))),
+              ]),
+              const SizedBox(height: 12),
+
+              if (list.isEmpty)
+                const Text(
+                  'Aucun prodrome signalé par le patient.',
+                  style: TextStyle(
+                    fontSize: 13, color: AppColors.textSecondary))
+              else
+                ...list.take(5).map((p) {
+                  final fmt =
+                    '${p.date.day.toString().padLeft(2,'0')}/'
+                    '${p.date.month.toString().padLeft(2,'0')}/'
+                    '${p.date.year}  '
+                    '${p.date.hour.toString().padLeft(2,'0')}:'
+                    '${p.date.minute.toString().padLeft(2,'0')}';
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceAlt,
+                      borderRadius: BorderRadius.circular(12)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(fmt,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textSecondary)),
+                        if (p.symptoms.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Wrap(spacing: 6, runSpacing: 4,
+                            children: p.symptoms.map((s) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEDE9FE),
+                                borderRadius: BorderRadius.circular(20)),
+                              child: Text(s,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF7C3AED))),
+                            )).toList()),
+                        ],
+                        if (p.note.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(p.note,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textPrimary,
+                              height: 1.4)),
+                        ],
+                      ],
+                    ),
+                  );
+                }),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }

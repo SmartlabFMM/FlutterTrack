@@ -113,7 +113,7 @@ class _AdminCreateAccountScreenState
       ?.any((u) => u.role == UserRole.doctor) ?? false;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Nouveau compte'),
         leading: IconButton(

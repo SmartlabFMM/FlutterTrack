@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/alert_provider.dart';
@@ -20,7 +21,11 @@ class FamilyAlertsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final alerts = ref.watch(alertListProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Alertes reçues')),
+      appBar: AppBar(
+        title: const Text('Alertes reçues'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => context.go('/family/dashboard'))),
       body: alerts.when(
         loading: () => const Center(
           child: CircularProgressIndicator(color: AppColors.primary)),

@@ -40,7 +40,7 @@ class _DoctorAlertsScreenState extends ConsumerState<DoctorAlertsScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: Colors.transparent,
         body: alerts.when(
           loading: () => const Center(
             child: CircularProgressIndicator(color: AppColors.primaryLight)),

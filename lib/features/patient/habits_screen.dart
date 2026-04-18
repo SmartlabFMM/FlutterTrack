@@ -44,7 +44,7 @@ class _HabitsScreenState extends State<HabitsScreen>
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: Colors.transparent,
         body: CustomScrollView(
           slivers: [
 
@@ -141,7 +141,7 @@ class _HabitsHero extends StatelessWidget {
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft, end: Alignment.bottomRight,
-          colors: [Color(0xFF2E78C7), Color(0xFF4A90D9), Color(0xFF7B8FD4)]),
+          colors: [Color(0xFF3DADA0), Color(0xFF5EC5B8), Color(0xFF8DD9D1)]),
         borderRadius: BorderRadius.only(
           bottomLeft:  Radius.circular(32),
           bottomRight: Radius.circular(32)),

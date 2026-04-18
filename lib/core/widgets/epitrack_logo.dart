@@ -93,9 +93,9 @@ class _LogoPainter extends CustomPainter {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Color(0xFF2E78C7),
-          Color(0xFF4A90D9),
-          Color(0xFF74B0E8),
+          Color(0xFF3DADA0),
+          Color(0xFF5EC5B8),
+          Color(0xFF8DD9D1),
         ],
       ).createShader(Rect.fromCircle(
         center: Offset(cx, cy), radius: r));

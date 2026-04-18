@@ -46,10 +46,12 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final canPop = Navigator.of(context).canPop() || context.canPop();
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: Colors.transparent,
         body: Column(
           children: [
             // ── Hero ───────────────────────────────────────
@@ -66,6 +68,20 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
                   padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
                   child: Column(
                     children: [
+                      if (canPop)
+                        Align(
+                          alignment: Alignment.topLeft,
+                          child: GestureDetector(
+                            onTap: () => context.pop(),
+                            child: Container(
+                              width: 38, height: 38,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(10)),
+                              child: const Icon(Icons.arrow_back_rounded,
+                                color: Colors.white, size: 20)),
+                          ),
+                        ),
                       const EpiTrackLogo(size: 72, animate: false),
                       const SizedBox(height: 16),
                       const Text('EpiTrack',

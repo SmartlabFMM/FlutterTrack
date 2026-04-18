@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
 import '../../providers/ble_provider.dart';
@@ -45,6 +46,9 @@ class _LiveSignalsScreenState extends ConsumerState<LiveSignalsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Signaux en direct'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => context.go('/patient/dashboard')),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 16),

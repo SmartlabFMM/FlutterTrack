@@ -562,7 +562,7 @@ class _AdminUserDetailScreenState
         final color = _roleColor(user.role);
 
         return Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: Colors.transparent,
           appBar: AppBar(
             title: Text(user.name),
             leading: IconButton(

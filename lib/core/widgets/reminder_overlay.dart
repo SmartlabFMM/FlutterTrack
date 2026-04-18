@@ -106,11 +106,11 @@ class _ReminderBannerState extends State<_ReminderBanner>
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF2E78C7), Color(0xFF74B0E8)]),
+                  colors: [Color(0xFF3DADA0), Color(0xFF8DD9D1)]),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF4A90D9).withValues(alpha: 0.40),
+                    color: const Color(0xFF5EC5B8).withValues(alpha: 0.40),
                     blurRadius: 24,
                     offset: const Offset(0, 8)),
                 ],

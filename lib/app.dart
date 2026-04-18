@@ -28,7 +28,10 @@ import 'features/admin/admin_accounts_screen.dart';
 import 'features/admin/admin_create_account_screen.dart';
 import 'features/admin/admin_user_detail_screen.dart';
 import 'core/widgets/reminder_overlay.dart';
+import 'core/widgets/medical_background.dart';
+import 'features/onboarding/onboarding_screen.dart';
 import 'providers/auth_provider.dart';
+import 'providers/onboarding_provider.dart';
 import 'providers/reminder_provider.dart';
 
 // ── Router notifier ──────────────────────────────────────────
@@ -41,11 +44,17 @@ class _RouterNotifier extends ChangeNotifier {
   }
 
   String? redirect(BuildContext context, GoRouterState state) {
-    final auth      = _ref.read(authProvider);
-    final isLoading = auth.status == AuthStatus.initial ||
-                      auth.status == AuthStatus.loading;
+    final loc = state.matchedLocation;
+
+    // ── Onboarding — laisser passer sans vérification auth ──────
+    if (loc == '/onboarding') return null;
+
+    // ── Auth ──────────────────────────────────────────────────
+    final auth       = _ref.read(authProvider);
+    final isLoading  = auth.status == AuthStatus.initial ||
+                       auth.status == AuthStatus.loading;
     final isLoggedIn = auth.status == AuthStatus.authenticated;
-    final isLogin    = state.matchedLocation == '/login';
+    final isLogin    = loc == '/login';
 
     if (isLoading) return null;
     if (!isLoggedIn && !isLogin) return '/login';
@@ -60,10 +69,14 @@ class _RouterNotifier extends ChangeNotifier {
 final _routerProvider = Provider<GoRouter>((ref) {
   final notifier = _RouterNotifier(ref);
   return GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/onboarding',
     refreshListenable: notifier,
     redirect: notifier.redirect,
     routes: [
+      GoRoute(
+        path: '/onboarding',
+        builder: (_, __) => const OnboardingScreen(),
+      ),
       GoRoute(
         path: '/login',
         builder: (_, __) => const LoginScreen(),
@@ -168,8 +181,10 @@ class EpiTrackApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: _buildTheme(),
       routerConfig: router,
-      builder: (context, child) =>
-          ReminderListener(child: child ?? const SizedBox()),
+      builder: (context, child) => ReminderListener(
+        child: MedicalBackground(
+          dense: true,
+          child: child ?? const SizedBox())),
       locale: const Locale('fr'),
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
@@ -195,7 +210,7 @@ class EpiTrackApp extends ConsumerWidget {
       onSurface: AppColors.textPrimary,
       outline: AppColors.cardBorder,
     ),
-    scaffoldBackgroundColor: AppColors.background,
+    scaffoldBackgroundColor: Colors.transparent,
     appBarTheme: const AppBarTheme(
       backgroundColor: Colors.transparent,
       foregroundColor: AppColors.textPrimary,

@@ -9,6 +9,7 @@ import '../../providers/consent_provider.dart';
 import '../../models/reminder_model.dart';
 import '../../providers/reminder_provider.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/contact_provider.dart';
 
 class PatientSettingsScreen extends ConsumerWidget {
   const PatientSettingsScreen({super.key});
@@ -20,7 +21,11 @@ class PatientSettingsScreen extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Réglages')),
+      appBar: AppBar(
+        title: const Text('Réglages'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => context.go('/patient/dashboard'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -37,22 +42,7 @@ class PatientSettingsScreen extends ConsumerWidget {
 
           // ── Contacts urgence ─────────────────────────────
           _SectionHeader(label: 'Contacts d\'urgence'),
-          _ContactTile(name: 'Maman',             phone: '+216 XX XXX XXX', role: 'Famille'),
-          _ContactTile(name: 'Dr. Kamel Trabelsi', phone: '+216 XX XXX XXX', role: 'Médecin'),
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-            leading: Container(
-              width: 42, height: 42,
-              decoration: BoxDecoration(
-                color: AppColors.primaryPale,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.primary, width: 0.8)),
-              child: const Icon(Icons.add, color: AppColors.primary, size: 20)),
-            title: const Text('Ajouter un contact',
-              style: TextStyle(color: AppColors.primary,
-                fontWeight: FontWeight.w600)),
-            onTap: () {},
-          ),
+          _ContactsSection(uid: user.uid),
           const SizedBox(height: 20),
 
           // ── Notifications ────────────────────────────────
@@ -78,7 +68,7 @@ class PatientSettingsScreen extends ConsumerWidget {
             onPressed: () async {
               final confirm = await showDialog<bool>(
                 context: context,
-                builder: (_) => AlertDialog(
+                builder: (ctx) => AlertDialog(
                   title: const Text('Retirer le consentement'),
                   content: const Text(
                     'Si vous retirez votre consentement, vous serez '
@@ -86,10 +76,10 @@ class PatientSettingsScreen extends ConsumerWidget {
                     'plus utiliser l\'application sans l\'accepter à nouveau.'),
                   actions: [
                     TextButton(
-                      onPressed: () => Navigator.pop(context, false),
+                      onPressed: () => Navigator.of(ctx).pop(false),
                       child: const Text('Annuler')),
                     TextButton(
-                      onPressed: () => Navigator.pop(context, true),
+                      onPressed: () => Navigator.of(ctx).pop(true),
                       child: const Text('Retirer',
                         style: TextStyle(color: AppColors.danger))),
                   ],
@@ -358,29 +348,152 @@ class _BraceletCard extends StatelessWidget {
   }
 }
 
-class _ContactTile extends StatelessWidget {
-  final String name, phone, role;
-  const _ContactTile({required this.name,
-    required this.phone, required this.role});
+class _ContactsSection extends ConsumerWidget {
+  final String uid;
+  const _ContactsSection({required this.uid});
+
   @override
-  Widget build(BuildContext context) => ListTile(
-    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-    leading: CircleAvatar(
-      backgroundColor: AppColors.tealPale,
-      child: Text(name.substring(0, 1),
-        style: const TextStyle(
-          color: AppColors.tealDark, fontWeight: FontWeight.w700))),
-    title: Text(name),
-    subtitle: Text(phone),
-    trailing: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: AppColors.primaryPale,
-        borderRadius: BorderRadius.circular(20)),
-      child: Text(role, style: const TextStyle(
-        fontSize: 11, color: AppColors.primary,
-        fontWeight: FontWeight.w600))),
-  );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final contacts = ref.watch(contactProvider);
+
+    return contacts.when(
+      loading: () => const SizedBox(
+        height: 40,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
+      error: (_, __) => const SizedBox(),
+      data: (list) => Column(
+        children: [
+          ...list.map((c) => ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+            leading: CircleAvatar(
+              backgroundColor: AppColors.tealPale,
+              child: Text(c.name.isNotEmpty ? c.name.substring(0, 1) : '?',
+                style: const TextStyle(
+                  color: AppColors.tealDark, fontWeight: FontWeight.w700))),
+            title: Text(c.name),
+            subtitle: Text(c.phone),
+            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryPale,
+                  borderRadius: BorderRadius.circular(20)),
+                child: Text(c.role, style: const TextStyle(
+                  fontSize: 11, color: AppColors.primary,
+                  fontWeight: FontWeight.w600))),
+              const SizedBox(width: 4),
+              GestureDetector(
+                onTap: () async {
+                  final ok = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Supprimer ce contact ?'),
+                      content: Text('${c.name} sera retiré des contacts.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(false),
+                          child: const Text('Annuler')),
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(true),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.danger),
+                          child: const Text('Supprimer')),
+                      ],
+                    ),
+                  );
+                  if (ok == true) {
+                    try {
+                      await removeContact(uid, c);
+                    } catch (_) {}
+                  }
+                },
+                child: const Icon(Icons.close_rounded,
+                  size: 18, color: AppColors.textHint)),
+            ]),
+          )),
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+            leading: Container(
+              width: 42, height: 42,
+              decoration: BoxDecoration(
+                color: AppColors.primaryPale,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.primary, width: 0.8)),
+              child: const Icon(Icons.add, color: AppColors.primary, size: 20)),
+            title: const Text('Ajouter un contact',
+              style: TextStyle(color: AppColors.primary,
+                fontWeight: FontWeight.w600)),
+            onTap: () => _showAddContactDialog(context, uid),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showAddContactDialog(BuildContext context, String uid) async {
+    final nameCtrl  = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    String role     = 'Famille';
+
+    await showDialog(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: const Text('Nouveau contact d\'urgence'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Nom complet',
+                  prefixIcon: Icon(Icons.person_rounded)),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phoneCtrl,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Numéro de téléphone',
+                  prefixIcon: Icon(Icons.call_rounded)),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: role,
+                decoration: const InputDecoration(
+                  labelText: 'Relation',
+                  prefixIcon: Icon(Icons.group_rounded)),
+                items: ['Famille', 'Médecin', 'Ami(e)', 'Autre']
+                    .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                    .toList(),
+                onChanged: (v) => setS(() => role = v ?? role),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Annuler')),
+            ElevatedButton(
+              onPressed: () async {
+                if (nameCtrl.text.trim().isEmpty ||
+                    phoneCtrl.text.trim().isEmpty) return;
+                await addContact(uid, Contact(
+                  name:  nameCtrl.text.trim(),
+                  phone: phoneCtrl.text.trim(),
+                  role:  role,
+                ));
+                if (ctx.mounted) Navigator.pop(ctx);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary),
+              child: const Text('Ajouter',
+                style: TextStyle(color: Colors.white))),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // ── Rappels traitement ────────────────────────────────────────
