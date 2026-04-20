@@ -89,7 +89,7 @@ Future<void> setUserDisabled(String uid, bool disabled) async {
   });
 }
 
-// ── Supprimer un compte (Firestore seulement) ────────────────────
+// ── Supprimer un compte ───────────────────────────────────────────
 Future<void> deleteUserAccount(String uid) async {
   await _db.collection('users').doc(uid).delete();
 }

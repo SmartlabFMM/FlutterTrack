@@ -30,6 +30,7 @@ import 'features/admin/admin_user_detail_screen.dart';
 import 'core/widgets/reminder_overlay.dart';
 import 'core/widgets/medical_background.dart';
 import 'features/onboarding/onboarding_screen.dart';
+import 'features/family/family_location_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/onboarding_provider.dart';
 import 'providers/reminder_provider.dart';
@@ -100,6 +101,10 @@ final _routerProvider = Provider<GoRouter>((ref) {
       // ── Routes famille hors shell ────────────────────────
       GoRoute(path: '/family/habits',
         builder: (_, __) => const FamilyHabitsScreen()),
+      GoRoute(
+        path: '/family/location/:patientId',
+        builder: (_, state) => FamilyLocationScreen(
+          patientId: state.pathParameters['patientId']!)),
 
       // ── Routes patient hors shell (pas de bottom nav) ────
       GoRoute(path: '/patient/consent',

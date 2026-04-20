@@ -13,6 +13,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/seizure_provider.dart';
 import '../../providers/rdv_provider.dart';
 import '../../providers/prodrome_provider.dart';
+import '../../providers/location_provider.dart';
 
 // ── Données aperçu habitudes (dashboard) ─────────────────────
 const _habitPreviews = [
@@ -49,6 +50,21 @@ class PatientDashboardScreen extends ConsumerWidget {
     final seizureList = ref.watch(seizureListProvider(uid));
     final firstName = auth.user!.name.split(' ').first;
     final nextRdv   = ref.watch(nextRdvProvider(uid)).value;
+
+    // ── Déclencheurs automatiques de localisation ─────────────
+    ref.listen(patientLocationTriggerProvider(uid), (_, next) {
+      next.whenData((trigger) {
+        final sharing = ref.read(locationSharingProvider);
+        if (sharing.isSharing) return;
+        if (trigger.seizureDetected) {
+          ref.read(locationSharingProvider.notifier)
+              .startSharing(uid, LocationTrigger.seizure);
+        } else if (trigger.riskScore > 0.66) {
+          ref.read(locationSharingProvider.notifier)
+              .startSharing(uid, LocationTrigger.riskScore);
+        }
+      });
+    });
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,

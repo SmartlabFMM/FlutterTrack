@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/location_provider.dart';
 import '../../services/notification_service.dart';
 
 class SosButton extends ConsumerStatefulWidget {
@@ -32,7 +34,14 @@ class _SosButtonState extends ConsumerState<SosButton>
 
   void _onLongPress() async {
     setState(() => _triggered = true);
-    // Vibration + alerte
+
+    // Déclencher le partage de localisation GPS
+    final uid = ref.read(authProvider).user?.uid;
+    if (uid != null) {
+      await ref.read(locationSharingProvider.notifier)
+          .startSharing(uid, LocationTrigger.sos);
+    }
+
     await NotificationService.sendSmsFamilyAlert(
       phone: '+216XXXXXXXX',
       patientName: 'Patient',

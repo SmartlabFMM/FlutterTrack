@@ -48,6 +48,11 @@ dependencies:
   # Permissions
   permission_handler: ^11.3.1
 
+  # GPS / Carte
+  geolocator: ^13.0.0
+  flutter_map: ^7.0.0
+  latlong2: ^0.9.1
+
   # PDF
   pdf: ^3.10.8
   printing: ^5.12.0

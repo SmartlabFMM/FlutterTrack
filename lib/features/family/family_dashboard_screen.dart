@@ -9,6 +9,7 @@ import '../../models/seizure_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/alert_provider.dart';
 import '../../providers/seizure_provider.dart';
+import '../../providers/location_provider.dart';
 import '../../services/notification_service.dart';
 
 class FamilyDashboardScreen extends ConsumerWidget {
@@ -63,6 +64,10 @@ class FamilyDashboardScreen extends ConsumerWidget {
                     loading: () => const SizedBox(),
                     error: (_, __) => const SizedBox(),
                   ),
+                  const SizedBox(height: 12),
+
+                  // ── Carte localisation ─────────────────────
+                  _LocationCard(patientId: patId),
                   const SizedBox(height: 20),
 
                   // ── Actions rapides ────────────────────────
@@ -525,4 +530,92 @@ String _elapsedHuman(DateTime dt) {
   if (diff.inHours < 24)   return 'Il y a ${diff.inHours}h';
   if (diff.inDays < 7)     return 'Il y a ${diff.inDays}j';
   return DateFormat('dd MMM', 'fr').format(dt);
+}
+
+// ── Carte localisation GPS ────────────────────────────────────
+class _LocationCard extends ConsumerWidget {
+  final String patientId;
+  const _LocationCard({required this.patientId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locAsync = ref.watch(familyLocationProvider(patientId));
+
+    return locAsync.when(
+      loading: () => const SizedBox(),
+      error:   (_, __) => const SizedBox(),
+      data: (loc) {
+        final isActive = loc != null && loc.isActive;
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 0),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isActive
+              ? AppColors.danger.withValues(alpha: 0.08)
+              : AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isActive ? AppColors.danger : AppColors.cardBorder,
+              width: isActive ? 1.5 : 0.8),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48, height: 48,
+                decoration: BoxDecoration(
+                  color: isActive
+                    ? AppColors.danger.withValues(alpha: 0.15)
+                    : AppColors.surfaceAlt,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isActive
+                    ? Icons.location_on_rounded
+                    : Icons.location_off_rounded,
+                  color: isActive ? AppColors.danger : AppColors.textHint,
+                  size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isActive
+                        ? 'Localisation active'
+                        : 'Localisation inactive',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: isActive
+                          ? AppColors.danger
+                          : AppColors.textPrimary)),
+                    const SizedBox(height: 2),
+                    Text(
+                      isActive
+                        ? 'Mise à jour il y a ${DateTime.now().difference(loc!.updatedAt).inSeconds}s'
+                        : 'S\'active en cas de crise ou SOS',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary)),
+                  ],
+                ),
+              ),
+              if (isActive)
+                TextButton(
+                  onPressed: () => context.push(
+                    '/family/location/${patientId}'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.danger,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 6)),
+                  child: const Text('Voir',
+                    style: TextStyle(fontWeight: FontWeight.w700)),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }

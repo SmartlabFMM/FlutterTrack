@@ -64,7 +64,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
           user:   user,
         );
       } else {
-        state = const AuthState(status: AuthStatus.unauthenticated);
+        // Compte supprimé par l'admin → déconnecter + message
+        await _auth.signOut();
+        state = state.copyWith(
+          status:       AuthStatus.error,
+          errorMessage: 'Ce compte n\'existe plus. Contactez l\'administrateur.',
+        );
       }
     } catch (e) {
       state = state.copyWith(

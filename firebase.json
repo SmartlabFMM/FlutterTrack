@@ -1,1 +1,29 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"epitrack-c79db","appId":"1:6855081944:android:99f67e991cde1edf77fcad","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"epitrack-c79db","configurations":{"android":"1:6855081944:android:99f67e991cde1edf77fcad","ios":"1:6855081944:ios:265216c92c12c0e877fcad","macos":"1:6855081944:ios:265216c92c12c0e877fcad","web":"1:6855081944:web:d13cd704f1906cfa77fcad","windows":"1:6855081944:web:1cfcf4d2028fc24077fcad"}}}}}}
+{
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs18"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "epitrack-c79db",
+          "appId": "1:6855081944:android:99f67e991cde1edf77fcad",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "epitrack-c79db",
+          "configurations": {
+            "android": "1:6855081944:android:99f67e991cde1edf77fcad",
+            "ios": "1:6855081944:ios:265216c92c12c0e877fcad",
+            "macos": "1:6855081944:ios:265216c92c12c0e877fcad",
+            "web": "1:6855081944:web:d13cd704f1906cfa77fcad",
+            "windows": "1:6855081944:web:1cfcf4d2028fc24077fcad"
+          }
+        }
+      }
+    }
+  }
+}
