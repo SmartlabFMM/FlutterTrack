@@ -13,6 +13,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/seizure_provider.dart';
 import '../../providers/rdv_provider.dart';
 import '../../providers/prodrome_provider.dart';
+import '../../providers/vitals_sync_provider.dart';
 import '../../providers/location_provider.dart';
 
 // ── Données aperçu habitudes (dashboard) ─────────────────────
@@ -46,6 +47,7 @@ class PatientDashboardScreen extends ConsumerWidget {
     final ble       = ref.watch(bleProvider);
     final auth      = ref.watch(authProvider);
     final uid       = auth.user!.uid.toString();
+    ref.watch(vitalsSyncProvider); // sync BLE → Firestore pour la famille
     final latest    = ref.watch(latestSeizureProvider(uid));
     final seizureList = ref.watch(seizureListProvider(uid));
     final firstName = auth.user!.name.split(' ').first;

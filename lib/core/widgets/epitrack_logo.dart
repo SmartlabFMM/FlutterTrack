@@ -1,70 +1,19 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-/// Logo EpiTrack — shield hexagonal + onde EEG avec pic épileptique
-class EpiTrackLogo extends StatefulWidget {
+/// Logo EpiTrack — shield hexagonal + onde EEG (statique)
+class EpiTrackLogo extends StatelessWidget {
   final double size;
-  final bool   animate;
-  const EpiTrackLogo({super.key, this.size = 72, this.animate = true});
+  const EpiTrackLogo({super.key, this.size = 72, bool animate = false});
 
   @override
-  State<EpiTrackLogo> createState() => _EpiTrackLogoState();
-}
-
-class _EpiTrackLogoState extends State<EpiTrackLogo>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double>   _pulse;
-  late Animation<double>   _glow;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    );
-    _pulse = Tween<double>(begin: 0.95, end: 1.05).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
-    _glow = Tween<double>(begin: 0.4, end: 0.85).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
-
-    if (widget.animate) {
-      _ctrl.repeat(reverse: true);
-    }
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!widget.animate) {
-      return SizedBox(
-        width: widget.size,
-        height: widget.size,
-        child: CustomPaint(
-          painter: _LogoPainter(pulse: 1.0, glowAlpha: 0.6),
-        ),
-      );
-    }
-    return AnimatedBuilder(
-      animation: _ctrl,
-      builder: (_, __) => SizedBox(
-        width: widget.size,
-        height: widget.size,
-        child: CustomPaint(
-          painter: _LogoPainter(
-            pulse: _pulse.value,
-            glowAlpha: _glow.value,
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SizedBox(
+    width: size,
+    height: size,
+    child: CustomPaint(
+      painter: _LogoPainter(pulse: 1.0, glowAlpha: 0.6),
+    ),
+  );
 }
 
 class _LogoPainter extends CustomPainter {

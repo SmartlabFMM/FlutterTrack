@@ -14,6 +14,7 @@ import 'features/patient/settings_screen.dart';
 import 'features/patient/habits_screen.dart';
 import 'features/family/family_dashboard_screen.dart';
 import 'features/family/family_alerts_screen.dart';
+import 'features/family/family_signals_screen.dart';
 import 'features/family/emergency_contacts_screen.dart';
 import 'features/family/family_settings_screen.dart';
 import 'features/family/family_habits_screen.dart';
@@ -101,6 +102,8 @@ final _routerProvider = Provider<GoRouter>((ref) {
       // ── Routes famille hors shell ────────────────────────
       GoRoute(path: '/family/habits',
         builder: (_, __) => const FamilyHabitsScreen()),
+      GoRoute(path: '/family/signals',
+        builder: (_, __) => const FamilySignalsScreen()),
       GoRoute(
         path: '/family/location/:patientId',
         builder: (_, state) => FamilyLocationScreen(

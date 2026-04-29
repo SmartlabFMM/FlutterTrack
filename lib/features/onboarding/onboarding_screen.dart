@@ -102,10 +102,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         body: Column(
           children: [
 
-            // ── Hero animé ────────────────────────────────────
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeInOut,
+            // ── Hero ─────────────────────────────────────────
+            Container(
               decoration: BoxDecoration(
                 gradient: page.gradient,
                 borderRadius: const BorderRadius.only(
@@ -141,23 +139,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       const SizedBox(height: 36),
 
                       // Icône centrale dans cercle
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        child: Container(
-                          key: ValueKey(_current),
-                          width: 120, height: 120,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.3),
-                              width: 2),
-                          ),
-                          child: Icon(
-                            page.icon,
-                            size: 56,
-                            color: Colors.white,
-                          ),
+                      Container(
+                        width: 120, height: 120,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.3),
+                            width: 2),
+                        ),
+                        child: Icon(
+                          page.icon,
+                          size: 56,
+                          color: Colors.white,
                         ),
                       ),
                       const SizedBox(height: 32),
@@ -189,8 +183,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: List.generate(_pages.length, (i) {
                         final active = i == _current;
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
+                        return Container(
                           margin: const EdgeInsets.symmetric(horizontal: 4),
                           width:  active ? 24 : 8,
                           height: 8,
@@ -208,8 +201,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     // Bouton Suivant / Commencer
                     GestureDetector(
                       onTap: _next,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
+                      child: Container(
                         height: 54,
                         decoration: BoxDecoration(
                           gradient: page.gradient,

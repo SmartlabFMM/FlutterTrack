@@ -12,30 +12,12 @@ class SosButton extends ConsumerStatefulWidget {
   ConsumerState<SosButton> createState() => _SosButtonState();
 }
 
-class _SosButtonState extends ConsumerState<SosButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _anim;
+class _SosButtonState extends ConsumerState<SosButton> {
   bool _triggered = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _anim = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _anim.dispose();
-    super.dispose();
-  }
 
   void _onLongPress() async {
     setState(() => _triggered = true);
 
-    // Déclencher le partage de localisation GPS
     final uid = ref.read(authProvider).user?.uid;
     if (uid != null) {
       await ref.read(locationSharingProvider.notifier)
@@ -65,24 +47,23 @@ class _SosButtonState extends ConsumerState<SosButton>
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: AnimatedBuilder(
-        animation: _anim,
-        builder: (_, child) => Container(
-          width: 100 + (_triggered ? 0 : _anim.value * 8),
-          height: 100 + (_triggered ? 0 : _anim.value * 8),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.sosButton.withValues(alpha: 0.12 + _anim.value * 0.08),
-          ),
-          child: child,
+      child: Container(
+        width: 108,
+        height: 108,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: AppColors.sosButton.withValues(alpha: 0.15),
         ),
         child: GestureDetector(
           onLongPress: _onLongPress,
           child: Container(
             width: 96, height: 96,
-            decoration: const BoxDecoration(
+            margin: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.sosButton,
+              color: _triggered
+                ? AppColors.sosButton.withValues(alpha: 0.7)
+                : AppColors.sosButton,
             ),
             child: const Column(
               mainAxisAlignment: MainAxisAlignment.center,

@@ -14,32 +14,16 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen>
-    with SingleTickerProviderStateMixin {
+
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailCtrl    = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _obscure       = true;
-  late AnimationController _animCtrl;
-  late Animation<double>   _fadeAnim;
-  late Animation<Offset>   _slideAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _animCtrl = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 900));
-    _fadeAnim  = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.12), end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut));
-    WidgetsBinding.instance.addPostFrameCallback((_) => _animCtrl.forward());
-  }
 
   @override
   void dispose() {
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
-    _animCtrl.dispose();
     super.dispose();
   }
 
@@ -82,15 +66,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     // ── Section hero (sur fond sombre) ─────────
                     Padding(
                       padding: const EdgeInsets.fromLTRB(28, 40, 28, 0),
-                      child: FadeTransition(
-                        opacity: _fadeAnim,
-                        child: SlideTransition(
-                          position: _slideAnim,
-                          child: Column(
+                      child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Logo custom animé
-                              const EpiTrackLogo(size: 80, animate: true),
+                              const EpiTrackLogo(size: 80),
                               const SizedBox(height: 20),
                               const Text('EpiTrack',
                                 style: TextStyle(
@@ -113,11 +92,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     ),
 
                     // ── Card flottante (formulaire) ─────────────
-                    FadeTransition(
-                      opacity: _fadeAnim,
-                      child: SlideTransition(
-                        position: _slideAnim,
-                        child: Container(
+                    Container(
                           margin: const EdgeInsets.symmetric(horizontal: 16),
                           padding: const EdgeInsets.fromLTRB(24, 28, 24, 28),
                           decoration: BoxDecoration(
@@ -226,8 +201,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               // Bouton connexion avec gradient
                               GestureDetector(
                                 onTap: isLoading ? null : _login,
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
+                                child: Container(
                                   height: 52,
                                   decoration: BoxDecoration(
                                     gradient: isLoading ? null : const LinearGradient(
@@ -264,9 +238,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             ],
                           ),
                         ),
-                      ),
                     ),
-
 
                     const SizedBox(height: 24),
                     const Center(

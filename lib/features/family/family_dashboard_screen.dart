@@ -89,11 +89,24 @@ class FamilyDashboardScreen extends ConsumerWidget {
                       onTap: () => context.go('/family/contacts')),
                     const SizedBox(width: 10),
                     _ActionTile(
+                      icon: Icons.monitor_heart_rounded,
+                      label: 'Signaux\nen direct',
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF059669), Color(0xFF10B981)]),
+                      onTap: () => context.push('/family/signals')),
+                  ]),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    _ActionTile(
                       icon: Icons.checklist_rounded,
                       label: 'Bonnes\nhabitudes',
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF059669), Color(0xFF10B981)]),
+                        colors: [Color(0xFF7C3AED), Color(0xFF8B5CF6)]),
                       onTap: () => context.push('/family/habits')),
+                    const SizedBox(width: 10),
+                    const Expanded(child: SizedBox()),
+                    const SizedBox(width: 10),
+                    const Expanded(child: SizedBox()),
                   ]),
                   const SizedBox(height: 12),
 
