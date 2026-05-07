@@ -453,22 +453,8 @@ class _ActionTile extends StatelessWidget {
 }
 
 // ─── Appeler médecin ─────────────────────────────────────────
-class _CallDoctorCard extends StatefulWidget {
+class _CallDoctorCard extends StatelessWidget {
   const _CallDoctorCard();
-  @override
-  State<_CallDoctorCard> createState() => _CallDoctorCardState();
-}
-
-class _CallDoctorCardState extends State<_CallDoctorCard> {
-  bool _pulse = false;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _pulse = true);
-    });
-  }
 
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -487,19 +473,11 @@ class _CallDoctorCardState extends State<_CallDoctorCard> {
         ],
       ),
       child: Row(children: [
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 900),
-          curve: Curves.easeInOut,
-          width: _pulse ? 48 : 40,
-          height: _pulse ? 48 : 40,
+        Container(
+          width: 48, height: 48,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppColors.teal.withValues(alpha: _pulse ? 0.25 : 0.12),
-                AppColors.primary.withValues(alpha: _pulse ? 0.20 : 0.08),
-              ]),
+            color: AppColors.teal.withValues(alpha: 0.15),
             shape: BoxShape.circle),
-          onEnd: () { if (mounted) setState(() => _pulse = !_pulse); },
           child: const Icon(Icons.call_rounded,
             color: AppColors.teal, size: 22)),
         const SizedBox(width: 14),

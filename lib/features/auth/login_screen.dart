@@ -14,7 +14,6 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailCtrl    = TextEditingController();
   final _passwordCtrl = TextEditingController();
@@ -49,6 +48,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         backgroundColor: Colors.transparent,
         body: Stack(
           children: [
+
             // ── Hero gradient background ──────────────────────
             Container(
               height: size.height * 0.42,
@@ -63,181 +63,180 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ── Section hero (sur fond sombre) ─────────
+
+                    // ── Section hero ──────────────────────────
                     Padding(
                       padding: const EdgeInsets.fromLTRB(28, 40, 28, 0),
                       child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const EpiTrackLogo(size: 80),
-                              const SizedBox(height: 20),
-                              const Text('EpiTrack',
-                                style: TextStyle(
-                                  fontSize: 34,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                  letterSpacing: -0.5,
-                                  fontFamily: 'Inter')),
-                              const SizedBox(height: 6),
-                              Text(AppStrings.appTagline,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.white.withValues(alpha: 0.72),
-                                  fontFamily: 'Inter')),
-                              const SizedBox(height: 48),
-                            ],
-                          ),
-                        ),
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const EpiTrackLogo(size: 80),
+                          const SizedBox(height: 20),
+                          const Text('EpiTrack',
+                            style: TextStyle(
+                              fontSize: 34,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: -0.5,
+                              fontFamily: 'Inter')),
+                          const SizedBox(height: 6),
+                          Text(AppStrings.appTagline,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white.withValues(alpha: 0.72),
+                              fontFamily: 'Inter')),
+                          const SizedBox(height: 48),
+                        ],
                       ),
                     ),
 
-                    // ── Card flottante (formulaire) ─────────────
+                    // ── Card formulaire ───────────────────────
                     Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 16),
-                          padding: const EdgeInsets.fromLTRB(24, 28, 24, 28),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primary.withValues(alpha: 0.12),
-                                blurRadius: 40,
-                                offset: const Offset(0, 16)),
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.08),
-                                blurRadius: 20,
-                                offset: const Offset(0, 8)),
-                            ],
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.fromLTRB(24, 28, 24, 28),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.12),
+                            blurRadius: 40,
+                            offset: const Offset(0, 16)),
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8)),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+
+                          const Text('Connexion',
+                            style: TextStyle(
+                              fontSize: 22, fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                              fontFamily: 'Inter')),
+                          const SizedBox(height: 4),
+                          const Text('Accédez à votre espace personnel',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textSecondary)),
+                          const SizedBox(height: 24),
+
+                          // Champ email
+                          TextField(
+                            controller: _emailCtrl,
+                            keyboardType: TextInputType.emailAddress,
+                            style: const TextStyle(
+                              fontFamily: 'Inter', fontSize: 15,
+                              color: AppColors.textPrimary),
+                            decoration: InputDecoration(
+                              labelText: AppStrings.email,
+                              prefixIcon: Container(
+                                margin: const EdgeInsets.all(10),
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryPale,
+                                  borderRadius: BorderRadius.circular(8)),
+                                child: const Icon(Icons.email_outlined,
+                                  color: AppColors.primary, size: 18)),
+                            ),
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Connexion',
-                                style: TextStyle(
-                                  fontSize: 22, fontWeight: FontWeight.w800,
-                                  color: AppColors.textPrimary,
-                                  fontFamily: 'Inter')),
-                              const SizedBox(height: 4),
-                              const Text('Accédez à votre espace personnel',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.textSecondary)),
-                              const SizedBox(height: 24),
+                          const SizedBox(height: 14),
 
-                              // Champ email
-                              TextField(
-                                controller: _emailCtrl,
-                                keyboardType: TextInputType.emailAddress,
-                                style: const TextStyle(
-                                  fontFamily: 'Inter', fontSize: 15,
-                                  color: AppColors.textPrimary),
-                                decoration: InputDecoration(
-                                  labelText: AppStrings.email,
-                                  prefixIcon: Container(
-                                    margin: const EdgeInsets.all(10),
-                                    padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primaryPale,
-                                      borderRadius: BorderRadius.circular(8)),
-                                    child: const Icon(Icons.email_outlined,
-                                      color: AppColors.primary, size: 18)),
-                                ),
-                              ),
-                              const SizedBox(height: 14),
+                          // Champ mot de passe
+                          TextField(
+                            controller: _passwordCtrl,
+                            obscureText: _obscure,
+                            style: const TextStyle(
+                              fontFamily: 'Inter', fontSize: 15,
+                              color: AppColors.textPrimary),
+                            decoration: InputDecoration(
+                              labelText: AppStrings.password,
+                              prefixIcon: Container(
+                                margin: const EdgeInsets.all(10),
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryPale,
+                                  borderRadius: BorderRadius.circular(8)),
+                                child: const Icon(Icons.lock_outline,
+                                  color: AppColors.primary, size: 18)),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscure
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                                  color: AppColors.textHint, size: 20),
+                                onPressed: () =>
+                                  setState(() => _obscure = !_obscure)),
+                            ),
+                            onSubmitted: (_) => isLoading ? null : _login(),
+                          ),
 
-                              // Champ mot de passe
-                              TextField(
-                                controller: _passwordCtrl,
-                                obscureText: _obscure,
-                                style: const TextStyle(
-                                  fontFamily: 'Inter', fontSize: 15,
-                                  color: AppColors.textPrimary),
-                                decoration: InputDecoration(
-                                  labelText: AppStrings.password,
-                                  prefixIcon: Container(
-                                    margin: const EdgeInsets.all(10),
-                                    padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primaryPale,
-                                      borderRadius: BorderRadius.circular(8)),
-                                    child: const Icon(Icons.lock_outline,
-                                      color: AppColors.primary, size: 18)),
-                                  suffixIcon: IconButton(
-                                    icon: Icon(
-                                      _obscure
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
-                                      color: AppColors.textHint, size: 20),
-                                    onPressed: () =>
-                                      setState(() => _obscure = !_obscure)),
-                                ),
-                                onSubmitted: (_) => isLoading ? null : _login(),
-                              ),
+                          // Message d'erreur
+                          if (auth.errorMessage != null) ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: AppColors.dangerLight,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: AppColors.danger.withValues(alpha: 0.25))),
+                              child: Row(children: [
+                                const Icon(Icons.error_outline,
+                                  color: AppColors.danger, size: 16),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text(auth.errorMessage!,
+                                  style: const TextStyle(
+                                    color: AppColors.danger, fontSize: 13))),
+                              ]),
+                            ),
+                          ],
 
-                              // Erreur
-                              if (auth.errorMessage != null) ...[
-                                const SizedBox(height: 12),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.dangerLight,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                      color: AppColors.danger.withValues(alpha: 0.25))),
-                                  child: Row(children: [
-                                    const Icon(Icons.error_outline,
-                                      color: AppColors.danger, size: 16),
-                                    const SizedBox(width: 8),
-                                    Expanded(child: Text(auth.errorMessage!,
-                                      style: const TextStyle(
-                                        color: AppColors.danger, fontSize: 13))),
+                          const SizedBox(height: 24),
+
+                          // Bouton connexion
+                          GestureDetector(
+                            onTap: isLoading ? null : _login,
+                            child: Container(
+                              height: 52,
+                              decoration: BoxDecoration(
+                                gradient: isLoading ? null : const LinearGradient(
+                                  colors: [
+                                    AppColors.primaryDark,
+                                    AppColors.primary,
+                                    AppColors.primaryLight,
                                   ]),
-                                ),
-                              ],
-
-                              const SizedBox(height: 24),
-
-                              // Bouton connexion avec gradient
-                              GestureDetector(
-                                onTap: isLoading ? null : _login,
-                                child: Container(
-                                  height: 52,
-                                  decoration: BoxDecoration(
-                                    gradient: isLoading ? null : const LinearGradient(
-                                      colors: [
-                                        AppColors.primaryDark,
-                                        AppColors.primary,
-                                        AppColors.primaryLight,
-                                      ]),
-                                    color: isLoading ? AppColors.cardBorder : null,
-                                    borderRadius: BorderRadius.circular(14),
-                                    boxShadow: isLoading ? [] : [
-                                      BoxShadow(
-                                        color: AppColors.primary.withValues(alpha: 0.35),
-                                        blurRadius: 16,
-                                        offset: const Offset(0, 6)),
-                                    ],
-                                  ),
-                                  child: Center(
-                                    child: isLoading
-                                      ? const SizedBox(
-                                          width: 22, height: 22,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2.5,
-                                            color: Colors.white))
-                                      : const Text(AppStrings.loginButton,
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w700,
-                                            fontFamily: 'Inter')),
-                                  ),
-                                ),
+                                color: isLoading ? AppColors.cardBorder : null,
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: isLoading ? [] : [
+                                  BoxShadow(
+                                    color: AppColors.primary.withValues(alpha: 0.35),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 6)),
+                                ],
                               ),
-                            ],
+                              child: Center(
+                                child: isLoading
+                                  ? const SizedBox(
+                                      width: 22, height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        color: Colors.white))
+                                  : const Text(AppStrings.loginButton,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        fontFamily: 'Inter')),
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
+                      ),
                     ),
 
                     const SizedBox(height: 24),

@@ -36,11 +36,10 @@ const _pages = [
     icon:      Icons.notifications_active_rounded,
     iconColor: AppColors.primary,
     gradient:  AppColors.heroGradientPatient,
-    title:     'Détection & Prévention\ndes crises',
+    title:     'Détection automatique\ndes crises',
     subtitle:
       'L\'application détecte les crises d\'épilepsie en temps réel '
-      'et analyse les prodromes pour anticiper leur survenue. '
-      'Des alertes sont envoyées immédiatement à votre médecin et à vos proches.',
+      'et envoie immédiatement des alertes à votre médecin et à vos proches.',
   ),
   _OnboardingPage(
     icon:      Icons.people_rounded,

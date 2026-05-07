@@ -35,6 +35,7 @@ import 'features/family/family_location_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/onboarding_provider.dart';
 import 'providers/reminder_provider.dart';
+import 'providers/vitals_sync_provider.dart';
 
 // ── Router notifier ──────────────────────────────────────────
 class _RouterNotifier extends ChangeNotifier {
@@ -183,6 +184,7 @@ class EpiTrackApp extends ConsumerWidget {
     final router = ref.watch(_routerProvider);
     // Démarrer le scheduler de rappels dès le lancement
     ref.watch(reminderProvider);
+    ref.watch(vitalsSyncProvider); // sync BLE → Firestore (global, pas dans le dashboard)
 
     return MaterialApp.router(
       title: 'EpiTrack',

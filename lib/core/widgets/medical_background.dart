@@ -25,11 +25,13 @@ class MedicalBackground extends StatelessWidget {
           ),
         ),
 
-        // Icônes décoratives en filigrane
+        // Icônes décoratives en filigrane (RepaintBoundary = jamais repeint)
         Positioned.fill(
-          child: IgnorePointer(
-            child: CustomPaint(
-              painter: _MedicalPatternPainter(dense: dense),
+          child: RepaintBoundary(
+            child: IgnorePointer(
+              child: CustomPaint(
+                painter: _MedicalPatternPainter(dense: dense),
+              ),
             ),
           ),
         ),

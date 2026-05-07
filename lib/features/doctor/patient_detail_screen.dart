@@ -7,7 +7,6 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/seizure_provider.dart';
-import '../../providers/prodrome_provider.dart';
 
 class PatientDetailScreen extends ConsumerWidget {
   final String patientId;
@@ -62,10 +61,6 @@ class PatientDetailScreen extends ConsumerWidget {
                   _TriggersCard(
                     triggers: List<String>.from(
                       detail['triggers'] as List? ?? [])),
-                  const SizedBox(height: 14),
-
-                  // ── Prodromes (lecture seule) ─────────────
-                  _ProdromesDoctorCard(patientId: patientId),
                   const SizedBox(height: 14),
 
                   // ── Notes cliniques ──────────────────────
@@ -1449,113 +1444,3 @@ class _DoctorActionTile extends StatelessWidget {
   );
 }
 
-// ─── Prodromes (lecture seule médecin) ───────────────────────
-class _ProdromesDoctorCard extends ConsumerWidget {
-  final String patientId;
-  const _ProdromesDoctorCard({required this.patientId});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final prodromes = ref.watch(prodromeProvider(patientId));
-
-    return prodromes.when(
-      loading: () => const SizedBox(),
-      error:   (_, __) => const SizedBox(),
-      data: (list) {
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.cardBorder)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                Container(
-                  width: 34, height: 34,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEDE9FE),
-                    borderRadius: BorderRadius.circular(10)),
-                  child: const Icon(Icons.warning_amber_rounded,
-                    color: Color(0xFF7C3AED), size: 17)),
-                const SizedBox(width: 10),
-                const Text('Prodromes signalés',
-                  style: TextStyle(
-                    fontSize: 14, fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary)),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEDE9FE),
-                    borderRadius: BorderRadius.circular(20)),
-                  child: Text('${list.length}',
-                    style: const TextStyle(
-                      fontSize: 11, fontWeight: FontWeight.w700,
-                      color: Color(0xFF7C3AED)))),
-              ]),
-              const SizedBox(height: 12),
-
-              if (list.isEmpty)
-                const Text(
-                  'Aucun prodrome signalé par le patient.',
-                  style: TextStyle(
-                    fontSize: 13, color: AppColors.textSecondary))
-              else
-                ...list.take(5).map((p) {
-                  final fmt =
-                    '${p.date.day.toString().padLeft(2,'0')}/'
-                    '${p.date.month.toString().padLeft(2,'0')}/'
-                    '${p.date.year}  '
-                    '${p.date.hour.toString().padLeft(2,'0')}:'
-                    '${p.date.minute.toString().padLeft(2,'0')}';
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceAlt,
-                      borderRadius: BorderRadius.circular(12)),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(fmt,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textSecondary)),
-                        if (p.symptoms.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          Wrap(spacing: 6, runSpacing: 4,
-                            children: p.symptoms.map((s) => Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFEDE9FE),
-                                borderRadius: BorderRadius.circular(20)),
-                              child: Text(s,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF7C3AED))),
-                            )).toList()),
-                        ],
-                        if (p.note.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          Text(p.note,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textPrimary,
-                              height: 1.4)),
-                        ],
-                      ],
-                    ),
-                  );
-                }),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
