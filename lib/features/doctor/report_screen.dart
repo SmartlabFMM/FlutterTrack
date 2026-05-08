@@ -138,9 +138,6 @@ class ReportScreen extends ConsumerWidget {
       Map<String, dynamic>? detail) async {
     final doc    = pw.Document();
     final today  = DateFormat('dd MMMM yyyy', 'fr').format(DateTime.now());
-    final avgDur = seizures.isEmpty ? 0
-      : seizures.map((s) => s.durationSeconds).reduce((a, b) => a + b)
-          ~/ seizures.length;
     final avgScore = seizures.isEmpty ? 0.0
       : seizures.map((s) => s.mlScore).reduce((a, b) => a + b)
           / seizures.length;
@@ -227,11 +224,8 @@ class ReportScreen extends ConsumerWidget {
           _pdfStatBox('${seizures.length}', 'Crises totales',
             PdfColor.fromHex('FECACA'), PdfColor.fromHex('991B1B')),
           pw.SizedBox(width: 8),
-          _pdfStatBox(_fmt(avgDur), 'Durée moyenne',
-            PdfColor.fromHex('BFDBFE'), PdfColor.fromHex('1E3A8A')),
-          pw.SizedBox(width: 8),
           _pdfStatBox('${(avgScore * 100).toStringAsFixed(0)}%',
-            'Score ML moyen', PdfColor.fromHex('FDE68A'), PdfColor.fromHex('92400E')),
+            'Score de risque moyen', PdfColor.fromHex('FDE68A'), PdfColor.fromHex('92400E')),
           pw.SizedBox(width: 8),
           _pdfStatBox(
             compliance != null ? '${(compliance * 100).round()}%' : '—',
@@ -290,7 +284,7 @@ class ReportScreen extends ConsumerWidget {
         _pdfSection('Historique des crises'),
         pw.SizedBox(height: 8),
         pw.TableHelper.fromTextArray(
-          headers: ['Date & Heure', 'Durée', 'Score ML', 'Sévérité'],
+          headers: ['Date & Heure', 'Durée', 'Score de risque', 'Sévérité'],
           headerStyle: pw.TextStyle(
             fontWeight: pw.FontWeight.bold,
             color: PdfColor.fromHex('1E3A8A'),
@@ -498,10 +492,6 @@ class ReportScreen extends ConsumerWidget {
     ),
   );
 
-  String _fmt(int s) {
-    final m = s ~/ 60, r = s % 60;
-    return m > 0 ? '${m}m ${r}s' : '${r}s';
-  }
 }
 
 // ── Widgets Flutter (aperçu) ──────────────────────────────────
@@ -578,9 +568,6 @@ class _SeizureSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final avgDur = seizures.isEmpty ? 0
-      : seizures.map((s) => s.durationSeconds).reduce((a, b) => a + b)
-          ~/ seizures.length;
     final avgScore = seizures.isEmpty ? 0.0
       : seizures.map((s) => s.mlScore).reduce((a, b) => a + b)
           / seizures.length;
@@ -591,18 +578,12 @@ class _SeizureSummaryCard extends StatelessWidget {
       child: Row(children: [
         _StatBox('${seizures.length}', 'Crises', AppColors.seizureRed),
         _vDivider(),
-        _StatBox(_fmtDur(avgDur), 'Durée moy.', AppColors.primary),
-        _vDivider(),
         _StatBox('${(avgScore*100).toStringAsFixed(0)}%',
-          'Score ML', AppColors.warning),
+          'Score de risque', AppColors.warning),
       ]),
     );
   }
 
-  static String _fmtDur(int s) {
-    final m = s ~/ 60, r = s % 60;
-    return m > 0 ? '${m}m ${r}s' : '${r}s';
-  }
 }
 
 class _LifestyleSection extends StatelessWidget {

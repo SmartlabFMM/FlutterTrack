@@ -7,6 +7,18 @@ import '../../core/constants/app_strings.dart';
 import '../../providers/ble_provider.dart';
 import '../../models/vital_signs_model.dart';
 
+Color _imuColor(double g) {
+  if (g < 2.5) return const Color(0xFF10B981);
+  if (g < 5.0) return AppColors.warning;
+  return AppColors.seizureRed;
+}
+
+String _imuLabel(double g) {
+  if (g < 2.5) return 'Faible';
+  if (g < 5.0) return 'Modéré';
+  return 'Élevé';
+}
+
 class LiveSignalsScreen extends ConsumerStatefulWidget {
   const LiveSignalsScreen({super.key});
   @override
@@ -73,50 +85,68 @@ class _LiveSignalsScreenState extends ConsumerState<LiveSignalsScreen> {
       body: ble.seizureDetected
         ? _SeizureOverlay(score: ble.seizureScore,
             onDismiss: () => ref.read(bleProvider.notifier).clearSeizureAlert())
-        : ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
+        : Column(children: [
+            if (!isConnected) const _OfflineBanner(),
+            Expanded(child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
 
-              // ── Résumé valeurs actuelles ─────────────────
-              if (ble.latestVitals != null)
-                _VitalsSummaryRow(vitals: ble.latestVitals!),
-              const SizedBox(height: 16),
+                // ── Résumé valeurs actuelles ─────────────────
+                if (ble.latestVitals != null)
+                  _VitalsSummaryRow(vitals: ble.latestVitals!),
+                const SizedBox(height: 16),
 
-              // ── Graphique accéléromètre ──────────────────
-              _SignalCard(
-                title: AppStrings.accel,
-                subtitle: 'Magnitude convulsive (g)',
-                color: AppColors.accelColor,
-                spots: _accelData,
-                minY: 0, maxY: 4,
-                unit: 'g',
-              ),
-              const SizedBox(height: 12),
+                // ── Graphique IMU ────────────────────────────
+                _ImuSignalCard(spots: _accelData),
+                const SizedBox(height: 12),
 
-              // ── Graphique FC ─────────────────────────────
-              _SignalCard(
-                title: AppStrings.heartRate,
-                subtitle: 'Battements / minute',
-                color: AppColors.heartColor,
-                spots: _heartData,
-                minY: 40, maxY: 180,
-                unit: 'bpm',
-              ),
-              const SizedBox(height: 12),
+                // ── Graphique FC ─────────────────────────────
+                _SignalCard(
+                  title: AppStrings.heartRate,
+                  subtitle: 'Battements / minute',
+                  color: AppColors.heartColor,
+                  spots: _heartData,
+                  minY: 40, maxY: 180,
+                  unit: 'bpm',
+                ),
+                const SizedBox(height: 12),
 
-              // ── Graphique GSR ────────────────────────────
-              _SignalCard(
-                title: AppStrings.gsr,
-                subtitle: 'Conductance normalisée (%)',
-                color: AppColors.gsrColor,
-                spots: _gsrData,
-                minY: 0, maxY: 100,
-                unit: '%',
-              ),
-            ],
-          ),
+                // ── Graphique GSR ────────────────────────────
+                _SignalCard(
+                  title: AppStrings.gsr,
+                  subtitle: 'Conductance normalisée (%)',
+                  color: AppColors.gsrColor,
+                  spots: _gsrData,
+                  minY: 0, maxY: 100,
+                  unit: '%',
+                ),
+              ],
+            )),
+          ]),
     );
   }
+}
+
+// ─── Offline banner ──────────────────────────────────────────
+class _OfflineBanner extends StatelessWidget {
+  const _OfflineBanner();
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    decoration: BoxDecoration(
+      color: AppColors.surfaceAlt,
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: AppColors.cardBorder)),
+    child: const Row(children: [
+      Icon(Icons.watch_off_rounded, size: 18, color: AppColors.textHint),
+      SizedBox(width: 10),
+      Text('Bracelet hors ligne',
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+          color: AppColors.textSecondary)),
+    ]),
+  );
 }
 
 // ─── SignalCard ──────────────────────────────────────────────
@@ -196,6 +226,148 @@ class _SignalCard extends StatelessWidget {
   }
 }
 
+// ─── ImuSignalCard ───────────────────────────────────────────
+class _ImuSignalCard extends StatelessWidget {
+  final List<FlSpot> spots;
+  const _ImuSignalCard({required this.spots});
+
+  @override
+  Widget build(BuildContext context) {
+    final lastMag = spots.isNotEmpty ? spots.last.y : 0.0;
+    final color   = _imuColor(lastMag);
+    final label   = _imuLabel(lastMag);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.cardBorder)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Container(width: 10, height: 10,
+              decoration: BoxDecoration(shape: BoxShape.circle, color: color)),
+            const SizedBox(width: 8),
+            const Text('Magnitude IMU',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary)),
+            const Spacer(),
+            if (spots.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12)),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Container(width: 6, height: 6,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle, color: color)),
+                  const SizedBox(width: 4),
+                  Text('${lastMag.toStringAsFixed(2)} g  $label',
+                    style: TextStyle(fontSize: 12,
+                      fontWeight: FontWeight.w700, color: color)),
+                ]),
+              ),
+          ]),
+          const Text('√(acc_x² + acc_y² + acc_z²)',
+            style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+          const SizedBox(height: 12),
+
+          SizedBox(
+            height: 110,
+            child: spots.isEmpty
+              ? Center(child: Text('En attente de données…',
+                  style: TextStyle(color: AppColors.textHint, fontSize: 12)))
+              : LineChart(LineChartData(
+                  minY: 0, maxY: 10,
+                  clipData: const FlClipData.all(),
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    horizontalInterval: 2.5,
+                    getDrawingHorizontalLine: (_) => FlLine(
+                      color: AppColors.cardBorder, strokeWidth: 0.8)),
+                  borderData: FlBorderData(show: false),
+                  titlesData: FlTitlesData(
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                    bottomTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 32,
+                        interval: 2.5,
+                        getTitlesWidget: (v, _) => Text(
+                          v % 1 == 0 ? '${v.toInt()}g' : '${v}g',
+                          style: const TextStyle(
+                            fontSize: 9, color: AppColors.textHint)),
+                      )),
+                  ),
+                  extraLinesData: ExtraLinesData(
+                    horizontalLines: [
+                      HorizontalLine(y: 2.5,
+                        color: AppColors.warning.withValues(alpha: 0.7),
+                        strokeWidth: 1.2,
+                        dashArray: [4, 3]),
+                      HorizontalLine(y: 5.0,
+                        color: AppColors.seizureRed.withValues(alpha: 0.7),
+                        strokeWidth: 1.2,
+                        dashArray: [4, 3]),
+                    ]),
+                  lineTouchData: const LineTouchData(enabled: false),
+                  lineBarsData: [LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    color: color,
+                    barWidth: 2.0,
+                    dotData: const FlDotData(show: false),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: color.withValues(alpha: 0.08)),
+                  )],
+                )),
+          ),
+          const SizedBox(height: 8),
+
+          Row(children: [
+            _ImuLegendItem(
+              color: const Color(0xFF10B981), label: '< 2.5g  Faible'),
+            const SizedBox(width: 12),
+            _ImuLegendItem(
+              color: AppColors.warning, label: '2.5–5g  Modéré'),
+            const SizedBox(width: 12),
+            _ImuLegendItem(
+              color: AppColors.seizureRed, label: '> 5g  Élevé'),
+          ]),
+        ],
+      ),
+    );
+  }
+}
+
+class _ImuLegendItem extends StatelessWidget {
+  final Color  color;
+  final String label;
+  const _ImuLegendItem({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(width: 7, height: 7,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: color)),
+      const SizedBox(width: 4),
+      Text(label, style: const TextStyle(
+        fontSize: 10, color: AppColors.textSecondary)),
+    ],
+  );
+}
+
 // ─── Vitals summary row ──────────────────────────────────────
 class _VitalsSummaryRow extends StatelessWidget {
   final VitalSignsModel vitals;
@@ -208,9 +380,11 @@ class _VitalsSummaryRow extends StatelessWidget {
         unit: 'bpm', color: AppColors.heartColor,
         alert: vitals.isHeartRateElevated),
       const SizedBox(width: 8),
-      _MiniStat(label: 'Accél.',
+      _MiniStat(label: 'IMU',
         value: vitals.accelMagnitude.toStringAsFixed(2),
-        unit: 'g', color: AppColors.accelColor, alert: false),
+        unit: 'g',
+        color: _imuColor(vitals.accelMagnitude),
+        alert: vitals.accelMagnitude >= 2.5),
       const SizedBox(width: 8),
       _MiniStat(label: 'GSR',
         value: (vitals.gsrValue * 100).toStringAsFixed(0),
@@ -273,7 +447,7 @@ class _SeizureOverlay extends StatelessWidget {
             style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800,
               color: AppColors.seizureRedDark)),
           const SizedBox(height: 8),
-          Text('Score ML : ${(score * 100).toStringAsFixed(0)}%',
+          Text('Score de risque : ${(score * 100).toStringAsFixed(0)}%',
             style: const TextStyle(fontSize: 16,
               color: AppColors.textSecondary)),
           const SizedBox(height: 8),

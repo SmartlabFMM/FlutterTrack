@@ -153,7 +153,7 @@ class PatientDashboardScreen extends ConsumerWidget {
                     ]),
                     const SizedBox(height: 20),
 
-                    // ── Score ML ce mois ─────────────────────
+                    // ── Score de risque ce mois ──────────────
                     const _SectionLabel('Ce mois'),
                     const SizedBox(height: 10),
                     seizureList.when(
@@ -460,22 +460,8 @@ class _QuickAction extends StatelessWidget {
 }
 
 // ─── Pas de crise ─────────────────────────────────────────────
-class _NoSeizureCard extends StatefulWidget {
+class _NoSeizureCard extends StatelessWidget {
   const _NoSeizureCard();
-  @override
-  State<_NoSeizureCard> createState() => _NoSeizureCardState();
-}
-
-class _NoSeizureCardState extends State<_NoSeizureCard> {
-  bool _pulse = false;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _pulse = true);
-    });
-  }
 
   @override
   Widget build(BuildContext context) => Container(
@@ -492,24 +478,20 @@ class _NoSeizureCardState extends State<_NoSeizureCard> {
       ],
     ),
     child: Row(children: [
-      AnimatedContainer(
-        duration: const Duration(milliseconds: 1000),
-        curve: Curves.easeInOut,
-        width: _pulse ? 40 : 32,
-        height: _pulse ? 40 : 32,
+      Container(
+        width: 40, height: 40,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: AppColors.teal.withValues(alpha: _pulse ? 0.2 : 0.1)),
-        onEnd: () { if (mounted) setState(() => _pulse = !_pulse); },
-        child: Icon(Icons.check_circle_rounded,
-          color: AppColors.teal, size: _pulse ? 22 : 18)),
+          color: AppColors.teal.withValues(alpha: 0.15)),
+        child: const Icon(Icons.check_circle_rounded,
+          color: AppColors.teal, size: 22)),
       const SizedBox(width: 14),
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(AppStrings.noSeizure,
           style: TextStyle(
             fontSize: 14, fontWeight: FontWeight.w700,
             color: AppColors.tealDark)),
-        const Text('Aucune activité anormale détectée',
+        Text('Aucune activité anormale détectée',
           style: TextStyle(
             fontSize: 12, color: AppColors.textSecondary)),
       ]),
@@ -666,73 +648,171 @@ class _LastSeizureCard extends StatelessWidget {
   }
 }
 
-// ─── Score ML ─────────────────────────────────────────────────
+// ─── Cartes mois : crises + score de risque ───────────────────
 class _MlScoreCard extends StatelessWidget {
   final List<SeizureModel> seizures;
   const _MlScoreCard({required this.seizures});
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
+    final now       = DateTime.now();
     final thisMonth = seizures.where((s) =>
       s.datetime.month == now.month && s.datetime.year == now.year).toList();
-
+    final count    = thisMonth.length;
     final avgScore = thisMonth.isEmpty
       ? null
-      : thisMonth.map((s) => s.mlScore).reduce((a, b) => a + b)
-          / thisMonth.length;
+      : thisMonth.map((s) => s.mlScore).reduce((a, b) => a + b) / thisMonth.length;
 
-    final scoreColor = avgScore == null ? AppColors.textHint
-      : avgScore >= 0.92 ? AppColors.seizureRed
-      : avgScore >= 0.85 ? AppColors.warning
-      : AppColors.teal;
+    return Row(children: [
+      Expanded(child: _SeizureCountCard(count: count)),
+      const SizedBox(width: 12),
+      Expanded(child: _RiskScoreCard(avgScore: avgScore)),
+    ]);
+  }
+}
+
+// ── Nombre de crises ──────────────────────────────────────────
+class _SeizureCountCard extends StatelessWidget {
+  final int count;
+  const _SeizureCountCard({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = count == 0
+      ? AppColors.teal
+      : count <= 2 ? AppColors.warning : AppColors.seizureRed;
+    final bg = count == 0
+      ? AppColors.tealPale
+      : count <= 2 ? AppColors.warningLight : AppColors.dangerLight;
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 14,
-            offset: const Offset(0, 4)),
+            color: color.withValues(alpha: 0.08),
+            blurRadius: 14, offset: const Offset(0, 4)),
         ],
       ),
-      child: Row(children: [
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
-          width: 52, height: 52,
+          width: 40, height: 40,
           decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [
-              scoreColor.withValues(alpha: 0.2),
-              scoreColor.withValues(alpha: 0.06)]),
-            borderRadius: BorderRadius.circular(14)),
-          child: Icon(Icons.analytics_rounded,
-            color: scoreColor, size: 26)),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Score moyen ML',
+            color: bg, borderRadius: BorderRadius.circular(12)),
+          child: Icon(Icons.bolt_rounded, color: color, size: 22)),
+        const SizedBox(height: 12),
+        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text('$count',
+            style: TextStyle(
+              fontSize: 34, fontWeight: FontWeight.w800,
+              color: color, height: 1)),
+          const SizedBox(width: 4),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text('crise${count > 1 ? 's' : ''}',
               style: TextStyle(fontSize: 12,
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w500)),
-            Text(
-              avgScore == null
-                ? 'Aucune crise ce mois'
-                : '${(avgScore * 100).toStringAsFixed(1)}%',
-              style: TextStyle(fontSize: 22,
-                fontWeight: FontWeight.w800, color: scoreColor)),
+                fontWeight: FontWeight.w600, color: color))),
+        ]),
+        const SizedBox(height: 4),
+        const Text('Ce mois-ci',
+          style: TextStyle(fontSize: 11,
+            color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+      ]),
+    );
+  }
+}
+
+// ── Score de risque ───────────────────────────────────────────
+class _RiskScoreCard extends StatelessWidget {
+  final double? avgScore;
+  const _RiskScoreCard({required this.avgScore});
+
+  @override
+  Widget build(BuildContext context) {
+    final String  label;
+    final Color   color;
+    final Color   bg;
+    final IconData icon;
+
+    if (avgScore == null) {
+      label = 'Inconnu';
+      color = AppColors.textHint;
+      bg    = AppColors.surfaceAlt;
+      icon  = Icons.analytics_rounded;
+    } else if (avgScore! >= 0.85) {
+      label = 'Élevé';
+      color = AppColors.seizureRed;
+      bg    = AppColors.dangerLight;
+      icon  = Icons.warning_rounded;
+    } else if (avgScore! >= 0.50) {
+      label = 'Moyen';
+      color = AppColors.warning;
+      bg    = AppColors.warningLight;
+      icon  = Icons.error_outline_rounded;
+    } else {
+      label = 'Faible';
+      color = AppColors.teal;
+      bg    = AppColors.tealPale;
+      icon  = Icons.check_circle_rounded;
+    }
+
+    final pct = avgScore == null
+      ? null : (avgScore! * 100).toStringAsFixed(0);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.08),
+            blurRadius: 14, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Container(
+          width: 40, height: 40,
+          decoration: BoxDecoration(
+            color: bg, borderRadius: BorderRadius.circular(12)),
+          child: Icon(icon, color: color, size: 22)),
+        const SizedBox(height: 12),
+        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text(pct ?? '—',
+            style: TextStyle(
+              fontSize: 34, fontWeight: FontWeight.w800,
+              color: color, height: 1)),
+          if (pct != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 5),
+              child: Text('%',
+                style: TextStyle(fontSize: 14,
+                  fontWeight: FontWeight.w700, color: color))),
+        ]),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: bg, borderRadius: BorderRadius.circular(20)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              width: 6, height: 6,
+              decoration: BoxDecoration(
+                color: color, shape: BoxShape.circle)),
+            const SizedBox(width: 5),
+            Text(label,
+              style: TextStyle(fontSize: 11,
+                fontWeight: FontWeight.w700, color: color)),
           ]),
         ),
-        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text('${thisMonth.length}',
-            style: TextStyle(fontSize: 28,
-              fontWeight: FontWeight.w800, color: scoreColor)),
-          Text('crise${thisMonth.length > 1 ? 's' : ''}',
-            style: const TextStyle(
-              fontSize: 11, color: AppColors.textSecondary)),
-        ]),
+        const SizedBox(height: 3),
+        const Text('Score de risque',
+          style: TextStyle(fontSize: 11,
+            color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
       ]),
     );
   }

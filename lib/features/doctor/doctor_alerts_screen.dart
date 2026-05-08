@@ -378,13 +378,13 @@ class _AlertCard extends StatelessWidget {
                       ? AppColors.warning : AppColors.textHint))),
           ]),
 
-          // Score ML + durée
+          // Score de risque + durée
           if (a.mlScore != null) ...[
             const SizedBox(height: 10),
             Row(children: [
               _BadgeChip(
                 icon: Icons.analytics_rounded,
-                label: 'Score ML : ${(a.mlScore! * 100).toStringAsFixed(0)}%',
+                label: 'Score de risque : ${(a.mlScore! * 100).toStringAsFixed(0)}%',
                 color: iconColor),
               if (a.durationSeconds != null) ...[
                 const SizedBox(width: 8),

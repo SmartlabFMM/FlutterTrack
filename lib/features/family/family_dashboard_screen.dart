@@ -374,7 +374,7 @@ class _LastAlertCard extends StatelessWidget {
         Row(children: [
           _InfoBadge(
             icon: Icons.analytics_rounded,
-            label: 'Score ML : ${(seizure.mlScore * 100).toStringAsFixed(0)}%',
+            label: 'Score de risque : ${(seizure.mlScore * 100).toStringAsFixed(0)}%',
             color: sc),
           const SizedBox(width: 8),
           _InfoBadge(

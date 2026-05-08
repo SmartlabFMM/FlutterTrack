@@ -36,7 +36,8 @@ class PatientsListScreen extends ConsumerStatefulWidget {
 
 class _PatientsListScreenState extends ConsumerState<PatientsListScreen> {
   final _searchCtrl = TextEditingController();
-  String _query = '';
+  String  _query        = '';
+  String? _statusFilter; // null = tous, 'seizure' | 'stable' | 'offline'
 
   @override
   void dispose() {
@@ -45,10 +46,20 @@ class _PatientsListScreenState extends ConsumerState<PatientsListScreen> {
   }
 
   List<Map<String, dynamic>> _filtered(List<Map<String, dynamic>> all) {
-    if (_query.isEmpty) return all;
-    final q = _query.toLowerCase();
-    return all.where((p) =>
-      (p['name'] as String).toLowerCase().contains(q)).toList();
+    var list = all;
+    if (_statusFilter != null) {
+      list = list.where((p) => p['status'] == _statusFilter).toList();
+    }
+    if (_query.isNotEmpty) {
+      final q = _query.toLowerCase();
+      list = list.where((p) =>
+        (p['name'] as String).toLowerCase().contains(q)).toList();
+    }
+    return list;
+  }
+
+  void _toggleFilter(String status) {
+    setState(() => _statusFilter = _statusFilter == status ? null : status);
   }
 
   @override
@@ -128,7 +139,11 @@ class _PatientsListScreenState extends ConsumerState<PatientsListScreen> {
 
                 // ── Résumé statuts ─────────────────────────
                 SliverToBoxAdapter(
-                  child: _StatusSummaryRow(patients: all),
+                  child: _StatusSummaryRow(
+                    patients:      all,
+                    activeFilter:  _statusFilter,
+                    onFilterTap:   _toggleFilter,
+                  ),
                 ),
 
                 // ── Liste patients ─────────────────────────
@@ -300,10 +315,16 @@ class _HeroStat extends StatelessWidget {
   ]);
 }
 
-// ─── Résumé statuts (chips) ───────────────────────────────────
+// ─── Résumé statuts (chips filtrables) ───────────────────────
 class _StatusSummaryRow extends StatelessWidget {
   final List<Map<String, dynamic>> patients;
-  const _StatusSummaryRow({required this.patients});
+  final String?                    activeFilter;
+  final ValueChanged<String>       onFilterTap;
+  const _StatusSummaryRow({
+    required this.patients,
+    required this.activeFilter,
+    required this.onFilterTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -315,61 +336,96 @@ class _StatusSummaryRow extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Row(children: [
         _StatusChip(
-          count: seizureCount, label: 'Alerte',
-          color: AppColors.seizureRed,
-          icon: Icons.warning_rounded),
+          count:      seizureCount,
+          label:      'Alerte',
+          status:     'seizure',
+          color:      AppColors.seizureRed,
+          icon:       Icons.warning_rounded,
+          isSelected: activeFilter == 'seizure',
+          onTap:      () => onFilterTap('seizure'),
+        ),
         const SizedBox(width: 8),
         _StatusChip(
-          count: stableCount, label: 'Stable',
-          color: AppColors.teal,
-          icon: Icons.check_circle_rounded),
+          count:      stableCount,
+          label:      'Stable',
+          status:     'stable',
+          color:      AppColors.teal,
+          icon:       Icons.check_circle_rounded,
+          isSelected: activeFilter == 'stable',
+          onTap:      () => onFilterTap('stable'),
+        ),
         const SizedBox(width: 8),
         _StatusChip(
-          count: offlineCount, label: 'Hors ligne',
-          color: AppColors.textHint,
-          icon: Icons.wifi_off_rounded),
+          count:      offlineCount,
+          label:      'Hors ligne',
+          status:     'offline',
+          color:      AppColors.textHint,
+          icon:       Icons.wifi_off_rounded,
+          isSelected: activeFilter == 'offline',
+          onTap:      () => onFilterTap('offline'),
+        ),
       ]),
     );
   }
 }
 
 class _StatusChip extends StatelessWidget {
-  final int count; final String label;
-  final Color color; final IconData icon;
-  const _StatusChip({required this.count, required this.label,
-    required this.color, required this.icon});
+  final int        count;
+  final String     label, status;
+  final Color      color;
+  final IconData   icon;
+  final bool       isSelected;
+  final VoidCallback onTap;
+
+  const _StatusChip({
+    required this.count,
+    required this.label,
+    required this.status,
+    required this.color,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) => Expanded(
-    child: Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.07),
-            blurRadius: 10,
-            offset: const Offset(0, 3)),
-        ],
-      ),
-      child: Row(children: [
-        Container(
-          width: 28, height: 28,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(7)),
-          child: Icon(icon, color: color, size: 14)),
-        const SizedBox(width: 8),
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('$count', style: TextStyle(
-            fontSize: 17, fontWeight: FontWeight.w800, color: color)),
-          Text(label, style: TextStyle(
-            fontSize: 10, color: color.withValues(alpha: 0.8),
-            fontWeight: FontWeight.w600)),
+    child: GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.12) : AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : color.withValues(alpha: 0.25),
+            width: isSelected ? 1.5 : 1),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: isSelected ? 0.14 : 0.07),
+              blurRadius: 10,
+              offset: const Offset(0, 3)),
+          ],
+        ),
+        child: Row(children: [
+          Container(
+            width: 28, height: 28,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: isSelected ? 0.22 : 0.12),
+              borderRadius: BorderRadius.circular(7)),
+            child: Icon(icon, color: color, size: 14)),
+          const SizedBox(width: 8),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('$count',
+              style: TextStyle(
+                fontSize: 17, fontWeight: FontWeight.w800, color: color)),
+            Text(label,
+              style: TextStyle(
+                fontSize: 10,
+                color: isSelected ? color : color.withValues(alpha: 0.8),
+                fontWeight: FontWeight.w600)),
+          ]),
         ]),
-      ]),
+      ),
     ),
   );
 }

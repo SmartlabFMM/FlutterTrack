@@ -1061,11 +1061,6 @@ class _SeizureStatsCard extends ConsumerWidget {
   final String patientId;
   const _SeizureStatsCard({required this.patientId});
 
-  String _fmt(int s) {
-    final m = s ~/ 60, sec = s % 60;
-    return m > 0 ? '${m}m ${sec}s' : '${sec}s';
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(seizureListProvider(patientId));
@@ -1081,9 +1076,6 @@ class _SeizureStatsCard extends ConsumerWidget {
         final thisMonth = list.where((s) =>
           s.datetime.month == now.month &&
           s.datetime.year  == now.year).toList();
-        final avgDur = list.isEmpty ? 0
-          : list.map((s) => s.durationSeconds)
-              .reduce((a, b) => a + b) ~/ list.length;
         final avgScore = list.isEmpty ? 0.0
           : list.map((s) => s.mlScore)
               .reduce((a, b) => a + b) / list.length;
@@ -1101,15 +1093,11 @@ class _SeizureStatsCard extends ConsumerWidget {
               label: 'Total', color: AppColors.primary,
               icon: Icons.summarize_rounded),
             _StatDivider(),
-            _StatBox(value: _fmt(avgDur),
-              label: 'Durée moy.', color: AppColors.teal,
-              icon: Icons.timer_rounded),
-            _StatDivider(),
             _StatBox(
               value: list.isEmpty
                 ? '—'
                 : '${(avgScore * 100).toStringAsFixed(0)}%',
-              label: 'Score ML', color: AppColors.warning,
+              label: 'Score de risque', color: AppColors.warning,
               icon: Icons.psychology_rounded),
           ]),
         );

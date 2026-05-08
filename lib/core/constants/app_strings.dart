@@ -31,7 +31,7 @@ class AppStrings {
 
   // Crise
   static const String seizureAlert  = 'Crise détectée !';
-  static const String seizureScore  = 'Score ML';
+  static const String seizureScore  = 'Score de risque';
   static const String seizureDur    = 'Durée';
   static const String noSeizure     = 'Aucune anomalie détectée';
   static const String lastSeizure   = 'Dernière crise';

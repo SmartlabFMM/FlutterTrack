@@ -127,7 +127,7 @@ class FamilyAlertsScreen extends ConsumerWidget {
                             if (a.mlScore != null) ...[
                               const SizedBox(height: 4),
                               Text(
-                                'Score ML: ${(a.mlScore! * 100).toStringAsFixed(0)}%'
+                                'Score de risque : ${(a.mlScore! * 100).toStringAsFixed(0)}%'
                                 '${a.durationSeconds != null ? "  ·  ${a.durationSeconds}s" : ""}',
                                 style: TextStyle(fontSize: 12,
                                   color: iconColor,

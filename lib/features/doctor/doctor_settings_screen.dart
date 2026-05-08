@@ -10,7 +10,8 @@ class DoctorSettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authProvider).user!;
+    final user = ref.watch(authProvider).user;
+    if (user == null) return const SizedBox.shrink();
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -121,17 +122,17 @@ class DoctorSettingsScreen extends ConsumerWidget {
   void _confirmLogout(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: const Text('Déconnexion'),
         content: const Text('Voulez-vous vous déconnecter ?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(dialogCtx).pop(),
             child: const Text('Annuler')),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ref.read(authProvider.notifier).logout();
+            onPressed: () async {
+              Navigator.of(dialogCtx).pop();
+              await ref.read(authProvider.notifier).logout();
             },
             child: const Text('Déconnecter',
               style: TextStyle(color: AppColors.danger))),

@@ -27,10 +27,11 @@ const _pages = [
     icon:      Icons.monitor_heart_rounded,
     iconColor: AppColors.primary,
     gradient:  AppColors.heroGradientPatient,
-    title:     'Surveillance cardiaque\nen temps réel',
+    title:     'Surveillance cardiaque\net des mouvements',
     subtitle:
-      'EpiTrack surveille votre fréquence cardiaque et vos mouvements '
-      'en temps réel grâce à un bracelet connecté, 24h/24.',
+      'EpiTrack surveille en continu votre fréquence cardiaque, '
+      'vos mouvements et votre conductance cutanée grâce à un bracelet '
+      'connecté, 24h/24.',
   ),
   _OnboardingPage(
     icon:      Icons.notifications_active_rounded,
@@ -40,6 +41,20 @@ const _pages = [
     subtitle:
       'L\'application détecte les crises d\'épilepsie en temps réel '
       'et envoie immédiatement des alertes à votre médecin et à vos proches.',
+  ),
+  _OnboardingPage(
+    icon:      Icons.shield_rounded,
+    iconColor: AppColors.tealDark,
+    gradient:  LinearGradient(
+      begin: Alignment.topLeft,
+      end:   Alignment.bottomRight,
+      colors: [Color(0xFF1A7F78), Color(0xFF2E9088), Color(0xFF3DADA0)],
+    ),
+    title:     'Prévention\ndes crises',
+    subtitle:
+      'Grâce à l\'analyse de vos habitudes de vie — sommeil, stress, '
+      'hydratation et activité — EpiTrack anticipe les risques et vous '
+      'aide à réduire la fréquence des crises.',
   ),
   _OnboardingPage(
     icon:      Icons.people_rounded,

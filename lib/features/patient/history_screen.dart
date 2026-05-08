@@ -22,14 +22,6 @@ class HistoryScreen extends ConsumerWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go('/patient/dashboard')),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.picture_as_pdf_outlined,
-              color: AppColors.primary),
-            tooltip: 'Exporter PDF',
-            onPressed: () => _exportPdf(context),
-          ),
-        ],
       ),
       body: seizures.when(
         loading: () => const Center(
@@ -49,12 +41,6 @@ class HistoryScreen extends ConsumerWidget {
     );
   }
 
-  void _exportPdf(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Génération du PDF en cours…'),
-        backgroundColor: AppColors.primary,
-        behavior: SnackBarBehavior.floating));
-  }
 }
 
 // ─── Résumé mensuel avec mini graphique en barres ────────────
@@ -339,7 +325,7 @@ class _SeizureCard extends StatelessWidget {
         ]),
         const Spacer(),
 
-        // Score ML
+        // Score de risque
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
