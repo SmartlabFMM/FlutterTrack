@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,6 +27,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
+  void _clearError() {
+    if (ref.read(authProvider).errorMessage != null) {
+      ref.read(authProvider.notifier).clearError();
+    }
+  }
+
   Future<void> _login() async {
     await ref.read(authProvider.notifier)
         .login(_emailCtrl.text.trim(), _passwordCtrl.text.trim());
@@ -33,6 +40,67 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final auth = ref.read(authProvider);
     if (auth.status == AuthStatus.authenticated) {
       context.go(RoleRouter.redirectForRole(auth.user!.role));
+    }
+  }
+
+  Future<void> _forgotPassword() async {
+    final emailCtrl = TextEditingController(text: _emailCtrl.text.trim());
+    final confirmed = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Mot de passe oublié ?'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text(
+            'Entrez votre adresse email. Vous recevrez un lien pour réinitialiser votre mot de passe.',
+            style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+          const SizedBox(height: 16),
+          TextField(
+            controller: emailCtrl,
+            keyboardType: TextInputType.emailAddress,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Adresse email',
+              prefixIcon: Icon(Icons.email_outlined)),
+          ),
+        ]),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Annuler')),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(emailCtrl.text.trim()),
+            child: const Text('Envoyer',
+              style: TextStyle(fontWeight: FontWeight.w700))),
+        ],
+      ),
+    );
+
+    if (confirmed == null || confirmed.isEmpty || !mounted) return;
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: confirmed);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Lien envoyé à $confirmed — vérifiez votre boîte mail.'),
+          backgroundColor: AppColors.teal,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      final msg = e.code == 'user-not-found'
+          ? 'Aucun compte associé à cet email.'
+          : 'Erreur lors de l\'envoi. Vérifiez l\'adresse.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: AppColors.danger,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
     }
   }
 
@@ -128,6 +196,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           TextField(
                             controller: _emailCtrl,
                             keyboardType: TextInputType.emailAddress,
+                            onChanged: (_) => _clearError(),
                             style: const TextStyle(
                               fontFamily: 'Inter', fontSize: 15,
                               color: AppColors.textPrimary),
@@ -149,6 +218,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           TextField(
                             controller: _passwordCtrl,
                             obscureText: _obscure,
+                            onChanged: (_) => _clearError(),
                             style: const TextStyle(
                               fontFamily: 'Inter', fontSize: 15,
                               color: AppColors.textPrimary),
@@ -172,6 +242,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   setState(() => _obscure = !_obscure)),
                             ),
                             onSubmitted: (_) => isLoading ? null : _login(),
+                          ),
+
+                          // Lien mot de passe oublié
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: _forgotPassword,
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4, vertical: 4)),
+                              child: const Text('Mot de passe oublié ?',
+                                style: TextStyle(
+                                  fontSize: 13, color: AppColors.primary,
+                                  fontWeight: FontWeight.w600)),
+                            ),
                           ),
 
                           // Message d'erreur

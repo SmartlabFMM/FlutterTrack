@@ -138,6 +138,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = const AuthState(status: AuthStatus.unauthenticated);
   }
 
+  void clearError() {
+    state = AuthState(
+      status: AuthStatus.unauthenticated,
+      user: state.user,
+    );
+  }
+
   String _authErrorMessage(String code) {
     switch (code) {
       case 'user-not-found':
