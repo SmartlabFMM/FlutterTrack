@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../constants/app_colors.dart';
 import '../services/sound_service.dart';
 import '../../models/reminder_model.dart';
 import '../../providers/reminder_provider.dart';

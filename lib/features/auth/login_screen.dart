@@ -1,4 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
+﻿import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -145,14 +145,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               fontSize: 34,
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
-                              letterSpacing: -0.5,
-                              fontFamily: 'Inter')),
+                              letterSpacing: -0.5,)),
                           const SizedBox(height: 6),
                           Text(AppStrings.appTagline,
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.white.withValues(alpha: 0.72),
-                              fontFamily: 'Inter')),
+                              color: Colors.white.withValues(alpha: 0.72),)),
                           const SizedBox(height: 48),
                         ],
                       ),
@@ -183,8 +181,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           const Text('Connexion',
                             style: TextStyle(
                               fontSize: 22, fontWeight: FontWeight.w800,
-                              color: AppColors.textPrimary,
-                              fontFamily: 'Inter')),
+                              color: AppColors.textPrimary,)),
                           const SizedBox(height: 4),
                           const Text('Accédez à votre espace personnel',
                             style: TextStyle(
@@ -198,7 +195,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             keyboardType: TextInputType.emailAddress,
                             onChanged: (_) => _clearError(),
                             style: const TextStyle(
-                              fontFamily: 'Inter', fontSize: 15,
+                              fontSize: 15,
                               color: AppColors.textPrimary),
                             decoration: InputDecoration(
                               labelText: AppStrings.email,
@@ -220,7 +217,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             obscureText: _obscure,
                             onChanged: (_) => _clearError(),
                             style: const TextStyle(
-                              fontFamily: 'Inter', fontSize: 15,
+                              fontSize: 15,
                               color: AppColors.textPrimary),
                             decoration: InputDecoration(
                               labelText: AppStrings.password,
@@ -315,8 +312,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                        fontFamily: 'Inter')),
+                                        fontWeight: FontWeight.w700,)),
                               ),
                             ),
                           ),

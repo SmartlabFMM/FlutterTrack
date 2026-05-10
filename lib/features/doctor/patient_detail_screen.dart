@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -84,6 +84,12 @@ class PatientDetailScreen extends ConsumerWidget {
                     subtitle: 'FC · Accéléromètre · GSR en temps réel',
                     color: AppColors.teal,
                     onTap: () => context.push('/doctor/vitals/$patientId')),
+                  _DoctorActionTile(
+                    icon: Icons.location_on_rounded,
+                    title: 'Localisation du patient',
+                    subtitle: 'Position GPS en cas de crise',
+                    color: AppColors.danger,
+                    onTap: () => context.push('/doctor/location/$patientId')),
                   _DoctorActionTile(
                     icon: Icons.picture_as_pdf_rounded,
                     title: 'Générer rapport PDF',
@@ -187,23 +193,6 @@ class PatientDetailScreen extends ConsumerWidget {
       builder: (_) => _EditMedicalSheet(
         patientId: patientId,
         detail: detail,
-        patientName: name,
-        onSaved: () => ref.invalidate(patientDataProvider(patientId)),
-      ),
-    );
-  }
-
-  // ── Infos personnelles éditables ─────────────────────────────
-  void _showEditPersonalSheet(
-      BuildContext context, WidgetRef ref,
-      Map<String, dynamic> raw, String name) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _EditPersonalSheet(
-        patientId: patientId,
-        raw: raw,
         patientName: name,
         onSaved: () => ref.invalidate(patientDataProvider(patientId)),
       ),
@@ -849,7 +838,7 @@ class _PatientHero extends StatelessWidget {
               const Text('Dossier patient',
                 style: TextStyle(
                   fontSize: 16, fontWeight: FontWeight.w700,
-                  color: Colors.white, fontFamily: 'Inter')),
+                  color: Colors.white)),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(

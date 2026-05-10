@@ -46,6 +46,8 @@ class BleNotifier extends StateNotifier<BleState> {
     state = state.copyWith(status: BleStatus.connected);
   }
 
+  void setPatientUid(String uid) => _ble.setPatientUid(uid);
+
   void clearSeizureAlert() =>
     state = state.copyWith(seizureDetected: false, seizureScore: 0.0);
 }

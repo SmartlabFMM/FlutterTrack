@@ -1,3 +1,4 @@
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,10 +18,17 @@ class FamilyDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user   = ref.watch(authProvider).user!;
-    final unread = ref.watch(unreadAlertCountProvider);
-    final patId  = user.linkedPatientId ?? '';
-    final latest = ref.watch(latestSeizureProvider(patId));
+    final user    = ref.watch(authProvider).user!;
+    final unread  = ref.watch(unreadAlertCountProvider);
+    final patId   = user.linkedPatientId ?? '';
+    final latest  = ref.watch(latestSeizureProvider(patId));
+    final trigger = ref.watch(patientLocationTriggerProvider(patId));
+    final seizureActive = trigger.maybeWhen(
+      data: (t) => t.seizureDetected, orElse: () => false);
+    final seizureScore = trigger.maybeWhen(
+      data: (t) => t.riskScore, orElse: () => 0.0);
+    final patientName = ref.watch(patientDataProvider(patId))
+        .valueOrNull?['nom'] as String? ?? 'le patient';
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -28,6 +36,19 @@ class FamilyDashboardScreen extends ConsumerWidget {
         backgroundColor: Colors.transparent,
         body: CustomScrollView(
           slivers: [
+
+            // ── Bannière crise en cours ───────────────────────
+            if (seizureActive)
+              SliverToBoxAdapter(
+                child: _SeizureAlertBanner(
+                  score: seizureScore,
+                  patientId: patId,
+                  patientName: patientName,
+                  onDismiss: () => FirebaseFirestore.instance
+                      .collection('users').doc(patId)
+                      .set({'seizureDetected': false}, SetOptions(merge: true)),
+                ),
+              ),
 
             // ── Hero section ──────────────────────────────────
             SliverToBoxAdapter(
@@ -165,7 +186,7 @@ class _FamilyHeroBanner extends StatelessWidget {
                 Text('Bonjour, $firstName',
                   style: const TextStyle(
                     fontSize: 18, fontWeight: FontWeight.w700,
-                    color: Colors.white, fontFamily: 'Inter')),
+                    color: Colors.white)),
                 Row(children: [
                   const EpiTrackLogoSmall(size: 18),
                   const SizedBox(width: 5),
@@ -523,6 +544,103 @@ String _elapsedHuman(DateTime dt) {
   return DateFormat('dd MMM', 'fr').format(dt);
 }
 
+// ── Bannière crise détectée par l'IA ─────────────────────────
+class _SeizureAlertBanner extends StatefulWidget {
+  final double   score;
+  final String   patientId;
+  final String   patientName;
+  final Future<void> Function() onDismiss;
+  const _SeizureAlertBanner({
+    required this.score,
+    required this.patientId,
+    required this.patientName,
+    required this.onDismiss,
+  });
+
+  @override
+  State<_SeizureAlertBanner> createState() => _SeizureAlertBannerState();
+}
+
+class _SeizureAlertBannerState extends State<_SeizureAlertBanner> {
+  bool _confirming = false;
+
+  Future<void> _confirm() async {
+    setState(() => _confirming = true);
+    await FirebaseFirestore.instance.collection('crises').add({
+      'patientId':      widget.patientId,
+      'patientNom':     widget.patientName,
+      'dateDebut':      FieldValue.serverTimestamp(),
+      'duree':          0,
+      'niveauSeverite': widget.score,
+      'traitee':        false,
+    });
+    await widget.onDismiss();
+  }
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: AppColors.dangerLight,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+      boxShadow: [
+        BoxShadow(
+          color: AppColors.danger.withValues(alpha: 0.15),
+          blurRadius: 16, offset: const Offset(0, 4)),
+      ],
+    ),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        const Icon(Icons.warning_amber_rounded,
+          color: AppColors.seizureRed, size: 22),
+        const SizedBox(width: 8),
+        const Expanded(
+          child: Text('Crise détectée par l\'IA !',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800,
+              color: AppColors.seizureRedDark)),
+        ),
+      ]),
+      const SizedBox(height: 4),
+      Text(
+        'Score de risque : ${(widget.score * 100).toStringAsFixed(0)}%'
+        '  —  Alertes envoyées',
+        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+      const SizedBox(height: 12),
+      Row(children: [
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: _confirming ? null : _confirm,
+            icon: _confirming
+              ? const SizedBox(width: 16, height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white))
+              : const Icon(Icons.check_circle_rounded, size: 18),
+            label: const Text('Confirmer la crise',
+              style: TextStyle(fontSize: 13)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.seizureRed,
+              minimumSize: const Size(0, 42)),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: OutlinedButton(
+            onPressed: _confirming ? null : widget.onDismiss,
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: AppColors.seizureRed),
+              minimumSize: const Size(0, 42)),
+            child: const Text('Fausse alerte',
+              style: TextStyle(fontSize: 13,
+                color: AppColors.seizureRed)),
+          ),
+        ),
+      ]),
+    ]),
+  );
+}
+
 // ── Carte localisation GPS ────────────────────────────────────
 class _LocationCard extends ConsumerWidget {
   final String patientId;
@@ -584,7 +702,7 @@ class _LocationCard extends ConsumerWidget {
                     const SizedBox(height: 2),
                     Text(
                       isActive
-                        ? 'Mise à jour il y a ${DateTime.now().difference(loc!.updatedAt).inSeconds}s'
+                        ? 'Mise à jour il y a ${DateTime.now().difference(loc.updatedAt).inSeconds}s'
                         : 'S\'active en cas de crise ou SOS',
                       style: const TextStyle(
                         fontSize: 12,

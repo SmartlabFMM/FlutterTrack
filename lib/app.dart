@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'core/constants/app_colors.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/role_router.dart';
@@ -24,6 +25,7 @@ import 'features/doctor/vitals_screen.dart';
 import 'features/doctor/doctor_alerts_screen.dart';
 import 'features/doctor/report_screen.dart';
 import 'features/doctor/doctor_settings_screen.dart';
+import 'features/doctor/doctor_location_screen.dart';
 import 'features/admin/admin_dashboard_screen.dart';
 import 'features/admin/admin_accounts_screen.dart';
 import 'features/admin/admin_create_account_screen.dart';
@@ -33,7 +35,6 @@ import 'core/widgets/medical_background.dart';
 import 'features/onboarding/onboarding_screen.dart';
 import 'features/family/family_location_screen.dart';
 import 'providers/auth_provider.dart';
-import 'providers/onboarding_provider.dart';
 import 'providers/reminder_provider.dart';
 import 'providers/vitals_sync_provider.dart';
 
@@ -154,6 +155,9 @@ final _routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/doctor/report/:id',
         builder: (_, state) => ReportScreen(
           patientId: state.pathParameters['id']!)),
+      GoRoute(path: '/doctor/location/:id',
+        builder: (_, state) => DoctorLocationScreen(
+          patientId: state.pathParameters['id']!)),
 
       // ── Admin ────────────────────────────────────────
       ShellRoute(
@@ -207,7 +211,7 @@ class EpiTrackApp extends ConsumerWidget {
 
   ThemeData _buildTheme() => ThemeData(
     useMaterial3: true,
-    fontFamily: 'Inter',
+    fontFamily: GoogleFonts.inter().fontFamily,
     colorScheme: ColorScheme.light(
       primary: AppColors.primary,
       primaryContainer: AppColors.primarySurface,
@@ -229,7 +233,7 @@ class EpiTrackApp extends ConsumerWidget {
       centerTitle: false,
       systemOverlayStyle: SystemUiOverlayStyle.dark,
       titleTextStyle: TextStyle(
-        fontFamily: 'Inter', fontSize: 18,
+        fontSize: 18,
         fontWeight: FontWeight.w700, color: AppColors.textPrimary),
       iconTheme: IconThemeData(color: AppColors.textPrimary),
     ),
@@ -248,7 +252,7 @@ class EpiTrackApp extends ConsumerWidget {
         shadowColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         textStyle: const TextStyle(
-          fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600),
+          fontSize: 16, fontWeight: FontWeight.w600),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -257,7 +261,7 @@ class EpiTrackApp extends ConsumerWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         side: const BorderSide(color: AppColors.cardBorder),
         textStyle: const TextStyle(
-          fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600),
+          fontSize: 16, fontWeight: FontWeight.w600),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
@@ -274,9 +278,9 @@ class EpiTrackApp extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: AppColors.primary, width: 2)),
       labelStyle: const TextStyle(
-        color: AppColors.textSecondary, fontFamily: 'Inter'),
+        color: AppColors.textSecondary),
       hintStyle: const TextStyle(
-        color: AppColors.textHint, fontFamily: 'Inter'),
+        color: AppColors.textHint),
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: AppColors.surface,
@@ -284,11 +288,11 @@ class EpiTrackApp extends ConsumerWidget {
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
           return const TextStyle(
-            fontFamily: 'Inter', fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w700,
             fontSize: 11, color: AppColors.primary);
         }
         return const TextStyle(
-          fontFamily: 'Inter', fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w500,
           fontSize: 11, color: AppColors.textHint);
       }),
       iconTheme: WidgetStateProperty.resolveWith((states) {
@@ -305,7 +309,7 @@ class EpiTrackApp extends ConsumerWidget {
       color: AppColors.cardBorder, thickness: 0.8),
     chipTheme: ChipThemeData(
       backgroundColor: AppColors.surfaceAlt,
-      labelStyle: const TextStyle(fontFamily: 'Inter', fontSize: 12),
+      labelStyle: const TextStyle(fontSize: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),
     dialogTheme: DialogThemeData(
@@ -326,23 +330,23 @@ class EpiTrackApp extends ConsumerWidget {
           : Colors.grey.shade300),
     ),
     textTheme: const TextTheme(
-      headlineLarge: TextStyle(fontFamily: 'Inter', fontSize: 28,
+      headlineLarge: TextStyle(fontSize: 28,
         fontWeight: FontWeight.w800, color: AppColors.textPrimary),
-      headlineMedium: TextStyle(fontFamily: 'Inter', fontSize: 22,
+      headlineMedium: TextStyle(fontSize: 22,
         fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-      titleLarge: TextStyle(fontFamily: 'Inter', fontSize: 18,
+      titleLarge: TextStyle(fontSize: 18,
         fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-      titleMedium: TextStyle(fontFamily: 'Inter', fontSize: 16,
+      titleMedium: TextStyle(fontSize: 16,
         fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-      titleSmall: TextStyle(fontFamily: 'Inter', fontSize: 14,
+      titleSmall: TextStyle(fontSize: 14,
         fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-      bodyLarge: TextStyle(fontFamily: 'Inter', fontSize: 15,
+      bodyLarge: TextStyle(fontSize: 15,
         color: AppColors.textPrimary),
-      bodyMedium: TextStyle(fontFamily: 'Inter', fontSize: 14,
+      bodyMedium: TextStyle(fontSize: 14,
         color: AppColors.textPrimary),
-      bodySmall: TextStyle(fontFamily: 'Inter', fontSize: 12,
+      bodySmall: TextStyle(fontSize: 12,
         color: AppColors.textSecondary),
-      labelSmall: TextStyle(fontFamily: 'Inter', fontSize: 11,
+      labelSmall: TextStyle(fontSize: 11,
         color: AppColors.textHint),
     ),
   );

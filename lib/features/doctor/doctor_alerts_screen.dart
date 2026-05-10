@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -198,7 +198,7 @@ class _AlertsHero extends StatelessWidget {
             const Text('Alertes critiques',
               style: TextStyle(
                 fontSize: 20, fontWeight: FontWeight.w800,
-                color: Colors.white, fontFamily: 'Inter')),
+                color: Colors.white)),
             const SizedBox(height: 4),
             Text('Surveillance en temps réel',
               style: TextStyle(
@@ -411,7 +411,7 @@ class _AlertCard extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10)),
                 textStyle: const TextStyle(
-                  fontFamily: 'Inter', fontSize: 13,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600)),
             ),
           ),

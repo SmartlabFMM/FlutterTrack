@@ -1,12 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user_model.dart';
 import '../firebase_options.dart';
 
-final _db   = FirebaseFirestore.instance;
-final _auth = FirebaseAuth.instance;
+final _db = FirebaseFirestore.instance;
 
 // ── Liste de tous les utilisateurs ──────────────────────────────
 final allUsersProvider = StreamProvider<List<UserModel>>((ref) {

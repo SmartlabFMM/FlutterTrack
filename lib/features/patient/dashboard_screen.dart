@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +13,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/seizure_provider.dart';
 import '../../providers/rdv_provider.dart';
 import '../../providers/location_provider.dart';
+import '../../services/seizure_confirmation_service.dart';
 
 // ── Données aperçu habitudes (dashboard) ─────────────────────
 const _habitPreviews = [
@@ -64,6 +65,11 @@ class PatientDashboardScreen extends ConsumerWidget {
         }
       });
     });
+
+    final triggerData = ref.watch(patientLocationTriggerProvider(uid))
+        .maybeWhen(data: (t) => t, orElse: () => null);
+    final showConfirmButton = triggerData != null &&
+        (triggerData.seizureDetected || triggerData.riskScore > 0.66);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -129,6 +135,12 @@ class PatientDashboardScreen extends ConsumerWidget {
                       child: Text(AppStrings.sosHold,
                         style: TextStyle(
                           fontSize: 12, color: AppColors.textHint))),
+
+                    // ── Confirmer la crise ────────────────────
+                    if (showConfirmButton) ...[
+                      const SizedBox(height: 16),
+                      _ConfirmSeizureButton(uid: uid),
+                    ],
                     const SizedBox(height: 24),
 
                     // ── Raccourcis ───────────────────────────
@@ -250,7 +262,7 @@ class _HeroBanner extends StatelessWidget {
                   Text('Bonjour, $firstName',
                     style: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.w700,
-                      color: Colors.white, fontFamily: 'Inter')),
+                      color: Colors.white)),
                   Row(children: [
                     const EpiTrackLogoSmall(size: 18),
                     const SizedBox(width: 5),
@@ -860,6 +872,89 @@ class _NextRdvCard extends StatelessWidget {
   );
 }
 
+// ─── Bouton confirmer la crise ───────────────────────────────
+class _ConfirmSeizureButton extends ConsumerStatefulWidget {
+  final String uid;
+  const _ConfirmSeizureButton({required this.uid});
+
+  @override
+  ConsumerState<_ConfirmSeizureButton> createState() =>
+      _ConfirmSeizureButtonState();
+}
+
+class _ConfirmSeizureButtonState
+    extends ConsumerState<_ConfirmSeizureButton> {
+  bool _loading = false;
+
+  Future<void> _onTap() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmer une crise ?'),
+        content: const Text(
+            'Cette action alimentera l\'amélioration du modèle IA.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+                backgroundColor: AppColors.seizureRed),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Confirmer'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+    setState(() => _loading = true);
+    try {
+      await SeizureConfirmationService().confirmSeizure(widget.uid);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Crise confirmée ✅ Merci, le modèle IA sera amélioré.'),
+          backgroundColor: AppColors.tealDark,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.seizureRed,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14)),
+          ),
+          onPressed: _loading ? null : _onTap,
+          icon: _loading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                      color: Colors.white, strokeWidth: 2))
+              : const Icon(Icons.check_circle_outline_rounded,
+                  color: Colors.white),
+          label: Text(
+            _loading ? 'Confirmation…' : 'Confirmer la crise',
+            style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: Colors.white),
+          ),
+        ),
+      );
+}
+
 // ─── Aperçu habitudes (dashboard) ────────────────────────────
 class _HabitsPreviewSection extends StatelessWidget {
   final VoidCallback onTap;
@@ -899,7 +994,7 @@ class _HabitsPreviewSection extends StatelessWidget {
               const Text('Vivre avec l\'épilepsie',
                 style: TextStyle(
                   fontSize: 14, fontWeight: FontWeight.w800,
-                  color: Colors.white, fontFamily: 'Inter')),
+                  color: Colors.white)),
               Text('8 habitudes essentielles',
                 style: TextStyle(
                   fontSize: 11,

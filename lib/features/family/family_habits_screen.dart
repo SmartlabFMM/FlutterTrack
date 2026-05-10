@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -189,7 +189,7 @@ class _FamilyHabitsScreenState extends ConsumerState<FamilyHabitsScreen> {
               const Text('Habitudes du patient',
                 style: TextStyle(
                   fontSize: 17, fontWeight: FontWeight.w800,
-                  color: Colors.white, fontFamily: 'Inter')),
+                  color: Colors.white)),
               Text('Suivi par la famille',
                 style: TextStyle(
                   fontSize: 12, color: Colors.white.withValues(alpha: 0.72))),
@@ -533,7 +533,7 @@ class _SaveButton extends StatelessWidget {
                 Text('Enregistrer',
                   style: TextStyle(
                     fontSize: 16, fontWeight: FontWeight.w700,
-                    color: Colors.white, fontFamily: 'Inter')),
+                    color: Colors.white)),
               ],
             ),
       ),

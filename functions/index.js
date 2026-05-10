@@ -21,3 +21,4 @@ exports.deleteAuthUser = onCall(async (request) => {
     throw new HttpsError('internal', error.message);
   }
 });
+

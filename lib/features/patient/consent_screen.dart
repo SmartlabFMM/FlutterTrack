@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -87,7 +87,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
                       const Text('EpiTrack',
                         style: TextStyle(
                           fontSize: 26, fontWeight: FontWeight.w900,
-                          color: Colors.white, fontFamily: 'Inter',
+                          color: Colors.white,
                           letterSpacing: -0.5)),
                       const SizedBox(height: 6),
                       Text('Confidentialité & Consentement',
@@ -218,8 +218,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
                                           style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w700,
-                                            color: Colors.white,
-                                            fontFamily: 'Inter')),
+                                            color: Colors.white,)),
                                   ),
                                 ),
                               ),

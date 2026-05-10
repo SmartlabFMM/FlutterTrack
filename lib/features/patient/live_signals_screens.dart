@@ -1,11 +1,13 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/ble_provider.dart';
 import '../../models/vital_signs_model.dart';
+import '../../services/seizure_confirmation_service.dart';
 
 Color _imuColor(double g) {
   if (g < 2.5) return const Color(0xFF10B981);
@@ -83,8 +85,15 @@ class _LiveSignalsScreenState extends ConsumerState<LiveSignalsScreen> {
         ],
       ),
       body: ble.seizureDetected
-        ? _SeizureOverlay(score: ble.seizureScore,
-            onDismiss: () => ref.read(bleProvider.notifier).clearSeizureAlert())
+        ? _SeizureOverlay(
+            score: ble.seizureScore,
+            onDismiss: () => ref.read(bleProvider.notifier).clearSeizureAlert(),
+            onConfirm: () async {
+              final user = ref.read(authProvider).user!;
+              await SeizureConfirmationService().confirm(user.uid);
+              ref.read(bleProvider.notifier).clearSeizureAlert();
+            },
+          )
         : Column(children: [
             if (!isConnected) const _OfflineBanner(),
             Expanded(child: ListView(
@@ -416,11 +425,9 @@ class _MiniStat extends StatelessWidget {
         const SizedBox(height: 2),
         RichText(text: TextSpan(children: [
           TextSpan(text: value, style: TextStyle(fontSize: 18,
-            fontWeight: FontWeight.w700, color: color,
-            fontFamily: 'Inter')),
+            fontWeight: FontWeight.w700, color: color,)),
           TextSpan(text: ' $unit', style: TextStyle(fontSize: 11,
-            color: alert ? color : AppColors.textSecondary,
-            fontFamily: 'Inter')),
+            color: alert ? color : AppColors.textSecondary,)),
         ])),
       ]),
     ),
@@ -428,10 +435,22 @@ class _MiniStat extends StatelessWidget {
 }
 
 // ─── Overlay crise ───────────────────────────────────────────
-class _SeizureOverlay extends StatelessWidget {
+class _SeizureOverlay extends StatefulWidget {
   final double       score;
   final VoidCallback onDismiss;
-  const _SeizureOverlay({required this.score, required this.onDismiss});
+  final Future<void> Function() onConfirm;
+  const _SeizureOverlay({
+    required this.score,
+    required this.onDismiss,
+    required this.onConfirm,
+  });
+
+  @override
+  State<_SeizureOverlay> createState() => _SeizureOverlayState();
+}
+
+class _SeizureOverlayState extends State<_SeizureOverlay> {
+  bool _confirming = false;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -447,7 +466,7 @@ class _SeizureOverlay extends StatelessWidget {
             style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800,
               color: AppColors.seizureRedDark)),
           const SizedBox(height: 8),
-          Text('Score de risque : ${(score * 100).toStringAsFixed(0)}%',
+          Text('Score de risque : ${(widget.score * 100).toStringAsFixed(0)}%',
             style: const TextStyle(fontSize: 16,
               color: AppColors.textSecondary)),
           const SizedBox(height: 8),
@@ -455,11 +474,39 @@ class _SeizureOverlay extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
           const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: onDismiss,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.seizureRed),
-            child: const Text('Acquitter l\'alerte'),
+
+          // Bouton confirmer
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _confirming ? null : () async {
+                setState(() => _confirming = true);
+                await widget.onConfirm();
+              },
+              icon: _confirming
+                ? const SizedBox(width: 18, height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.check_circle_rounded),
+              label: const Text('Confirmer la crise'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.seizureRed,
+                minimumSize: const Size(double.infinity, 50)),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Bouton acquitter (fausse alerte)
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: _confirming ? null : widget.onDismiss,
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: AppColors.seizureRed),
+                minimumSize: const Size(double.infinity, 50)),
+              child: const Text('Fausse alerte',
+                style: TextStyle(color: AppColors.seizureRed)),
+            ),
           ),
         ]),
       ),

@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -102,7 +102,7 @@ class _PatientsListScreenState extends ConsumerState<PatientsListScreen> {
                       controller: _searchCtrl,
                       onChanged: (v) => setState(() => _query = v),
                       style: const TextStyle(
-                        fontFamily: 'Inter', fontSize: 14,
+                        fontSize: 14,
                         color: AppColors.textPrimary),
                       decoration: InputDecoration(
                         hintText: 'Rechercher un patient…',
@@ -232,13 +232,12 @@ class _DoctorHeroBanner extends StatelessWidget {
                   Text('EpiTrack',
                     style: TextStyle(
                       fontSize: 13, fontWeight: FontWeight.w600,
-                      color: Colors.white.withValues(alpha: 0.85),
-                      fontFamily: 'Inter')),
+                      color: Colors.white.withValues(alpha: 0.85),)),
                 ]),
                 Text('Dr. $doctorName',
                   style: const TextStyle(
                     fontSize: 17, fontWeight: FontWeight.w800,
-                    color: Colors.white, fontFamily: 'Inter')),
+                    color: Colors.white)),
               ]),
               const Spacer(),
               GestureDetector(

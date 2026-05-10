@@ -61,6 +61,7 @@ class AppColors {
   static const Color accelColor     = Color(0xFF5EC5B8);
   static const Color heartColor     = Color(0xFFE05C5C);
   static const Color gsrColor       = Color(0xFF3DADA0);
+  static const Color spo2Color      = Color(0xFF3B82F6);
 
   // ── Dégradés prédéfinis ───────────────────────────────────────
   static const Gradient heroGradientPatient = LinearGradient(

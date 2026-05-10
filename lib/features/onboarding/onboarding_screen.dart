@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/epitrack_logo.dart';
 
@@ -235,8 +234,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                                fontFamily: 'Inter'),
+                                color: Colors.white,),
                             ),
                             const SizedBox(width: 8),
                             Icon(
@@ -263,7 +261,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 // ── Corps de chaque page ──────────────────────────────────────
 class _PageBody extends StatelessWidget {
   final _OnboardingPage page;
-  const _PageBody({super.key, required this.page});
+  const _PageBody({required this.page});
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -277,7 +275,6 @@ class _PageBody extends StatelessWidget {
             fontSize: 26,
             fontWeight: FontWeight.w800,
             color: AppColors.textPrimary,
-            fontFamily: 'Inter',
             height: 1.25,
             letterSpacing: -0.5,
           ),
@@ -289,7 +286,6 @@ class _PageBody extends StatelessWidget {
             fontSize: 15,
             color: AppColors.textSecondary,
             height: 1.6,
-            fontFamily: 'Inter',
           ),
         ),
       ],

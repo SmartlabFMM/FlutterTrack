@@ -153,49 +153,6 @@ class _AdminUserDetailScreenState
     );
   }
 
-  Future<void> _linkToDoctor(List<UserModel> allUsers) async {
-    final doctors = allUsers.where(
-      (u) => u.role == UserRole.doctor).toList();
-    if (doctors.isEmpty) {
-      _snack('Aucun médecin disponible', error: true);
-      return;
-    }
-    String? selected;
-    await showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Attribuer un médecin'),
-        content: StatefulBuilder(
-          builder: (ctx, setS) => Column(
-            mainAxisSize: MainAxisSize.min,
-            children: doctors.map((d) => RadioListTile<String>(
-              title: Text(d.name),
-              subtitle: Text(d.email,
-                style: const TextStyle(fontSize: 11)),
-              value: d.uid,
-              groupValue: selected,
-              onChanged: (v) => setS(() => selected = v),
-            )).toList(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler')),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              if (selected != null) {
-                await linkPatientToDoctor(widget.userId, selected!);
-                _snack('Médecin attribué');
-              }
-            },
-            child: const Text('Confirmer')),
-        ],
-      ),
-    );
-  }
-
   Future<void> _linkToPatient(List<UserModel> allUsers) async {
     final patients = allUsers.where(
       (u) => u.role == UserRole.patient).toList();

@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:typed_data';
 
 class VitalSignsModel {
@@ -16,7 +17,7 @@ class VitalSignsModel {
   });
 
   double get accelMagnitude =>
-    (accelX * accelX + accelY * accelY + accelZ * accelZ);
+    sqrt(accelX * accelX + accelY * accelY + accelZ * accelZ);
 
   bool get isHeartRateElevated => heartRate > 100;
   bool get isGsrElevated       => gsrValue > 0.7;

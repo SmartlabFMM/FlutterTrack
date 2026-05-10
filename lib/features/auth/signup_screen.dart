@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -147,7 +147,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
                               const Text('Créer un compte',
                                 style: TextStyle(
                                   fontSize: 22, fontWeight: FontWeight.w800,
-                                  color: Colors.white, fontFamily: 'Inter')),
+                                  color: Colors.white)),
                               Text('Rejoignez EpiTrack',
                                 style: TextStyle(
                                   fontSize: 13,
@@ -328,8 +328,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
                                             style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w700,
-                                              color: Colors.white,
-                                              fontFamily: 'Inter')),
+                                              color: Colors.white,)),
                                     ),
                                   ),
                                 ),
@@ -590,49 +589,3 @@ class _PatientPicker extends StatelessWidget {
   }
 }
 
-// ─── Chip sélecteur de rôle ───────────────────────────────────
-class _RoleChip extends StatelessWidget {
-  final String     label;
-  final IconData   icon;
-  final UserRole   role;
-  final bool       selected;
-  final VoidCallback onTap;
-  const _RoleChip({required this.label, required this.icon,
-    required this.role, required this.selected, required this.onTap});
-
-  static const _colors = {
-    UserRole.patient: AppColors.primary,
-    UserRole.family:  AppColors.teal,
-    UserRole.doctor:  Color(0xFF7C3AED),
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    final color = _colors[role]!;
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: selected
-              ? color.withValues(alpha: 0.12) : AppColors.surfaceAlt,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: selected ? color : AppColors.cardBorder,
-              width: selected ? 1.8 : 1)),
-          child: Column(children: [
-            Icon(icon, size: 20,
-              color: selected ? color : AppColors.textHint),
-            const SizedBox(height: 4),
-            Text(label,
-              style: TextStyle(
-                fontSize: 11, fontWeight: FontWeight.w700,
-                color: selected ? color : AppColors.textHint)),
-          ]),
-        ),
-      ),
-    );
-  }
-}

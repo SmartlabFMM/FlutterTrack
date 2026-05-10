@@ -249,7 +249,7 @@ class ReportScreen extends ConsumerWidget {
                   style: const pw.TextStyle(fontSize: 10))
               : pw.Column(children: lifestyle.entries.toList().asMap().entries.map((e) {
                   final odd = e.key.isOdd;
-                  final label = e.value.key as String;
+                  final label = e.value.key;
                   final value = e.value.value?.toString() ?? '—';
                   return _pdfLifestyleRow(label, value, odd);
                 }).toList()),

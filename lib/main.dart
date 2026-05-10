@@ -5,7 +5,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'app.dart';
-import 'providers/onboarding_provider.dart';
+import 'services/tflite_update_service.dart';
 
 final FlutterLocalNotificationsPlugin localNotifications =
     FlutterLocalNotificationsPlugin();
@@ -23,6 +23,9 @@ void main() async {
 
   // Notifications locales
   await _initLocalNotifications();
+
+  // Mise à jour du modèle TFLite (fire-and-forget, ne bloque pas le démarrage)
+  TfliteUpdateService.checkAndUpdate();
 
   runApp(const ProviderScope(child: EpiTrackApp()));
 }

@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,6 +41,7 @@ class _FamilySignalsScreenState extends ConsumerState<FamilySignalsScreen> {
   final List<FlSpot> _heartData = [];
   final List<FlSpot> _accelData = [];
   final List<FlSpot> _gsrData   = [];
+  final List<FlSpot> _spo2Data  = [];
   int _tick = 0;
 
   Map<String, dynamic>? _latest;
@@ -58,16 +59,20 @@ class _FamilySignalsScreenState extends ConsumerState<FamilySignalsScreen> {
           final hr    = ((data['heartRate']      ?? 0) as num).toDouble();
           final accel = ((data['accelMagnitude'] ?? 0) as num).toDouble();
           final gsr   = ((data['gsrValue']       ?? 0) as num).toDouble() * 100;
+          final spo2  = ((data['spo2']           ?? 0) as num).toDouble();
 
           _heartData.add(FlSpot(_tick.toDouble(), hr));
           _accelData.add(FlSpot(_tick.toDouble(), accel));
           _gsrData  .add(FlSpot(_tick.toDouble(), gsr));
+          if (spo2 > 0)
+            _spo2Data.add(FlSpot(_tick.toDouble(), spo2));
 
           if (_heartData.length > 60) {
             _heartData.removeAt(0);
             _accelData.removeAt(0);
             _gsrData  .removeAt(0);
           }
+          if (_spo2Data.length > 60) _spo2Data.removeAt(0);
         });
       });
     });
@@ -150,6 +155,17 @@ class _FamilySignalsScreenState extends ConsumerState<FamilySignalsScreen> {
                 spots:    _gsrData,
                 minY: 0, maxY: 100,
               ),
+              const SizedBox(height: 12),
+
+              // ── SpO₂ ─────────────────────────────────────────
+              _SignalCard(
+                title:    'Saturation en oxygène (SpO₂)',
+                subtitle: 'Taux d\'oxygène dans le sang (%)',
+                unit:     '%',
+                color:    AppColors.spo2Color,
+                spots:    _spo2Data,
+                minY: 80, maxY: 100,
+              ),
 
               const SizedBox(height: 24),
               _RgpdNote(),
@@ -172,8 +188,10 @@ class _VitalsSummaryRow extends StatelessWidget {
     final accel = ((data['accelMagnitude'] ?? 0) as num).toDouble();
     final gsr   = ((data['gsrValue']       ?? 0) as num).toDouble() * 100;
 
+    final spo2    = ((data['spo2'] ?? 0) as num).toDouble();
     final hrAlert  = hr > 120 || hr < 45;
     final gsrAlert = gsr > 70;
+    final spo2Alert = spo2 > 0 && spo2 < 95;
 
     return Row(children: [
       _MiniStat(label: 'FC',    value: '$hr',
@@ -182,8 +200,15 @@ class _VitalsSummaryRow extends StatelessWidget {
       _MiniStat(label: 'IMU', value: accel.toStringAsFixed(2),
         unit: 'g', color: _imuColor(accel), alert: accel >= 2.5),
       const SizedBox(width: 8),
-      _MiniStat(label: 'GSR',   value: gsr.toStringAsFixed(0),
+      _MiniStat(label: 'GSR', value: gsr.toStringAsFixed(0),
         unit: '%', color: AppColors.gsrColor, alert: gsrAlert),
+      const SizedBox(width: 8),
+      _MiniStat(
+        label: 'SpO₂',
+        value: spo2 > 0 ? spo2.toStringAsFixed(0) : '—',
+        unit: '%',
+        color: AppColors.spo2Color,
+        alert: spo2Alert),
     ]);
   }
 }
@@ -211,11 +236,10 @@ class _MiniStat extends StatelessWidget {
         RichText(text: TextSpan(children: [
           TextSpan(text: value, style: TextStyle(
             fontSize: 18, fontWeight: FontWeight.w700,
-            color: color, fontFamily: 'Inter')),
+            color: color)),
           TextSpan(text: ' $unit', style: TextStyle(
             fontSize: 11,
-            color: alert ? color : AppColors.textSecondary,
-            fontFamily: 'Inter')),
+            color: alert ? color : AppColors.textSecondary,)),
         ])),
       ]),
     ),

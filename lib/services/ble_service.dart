@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../models/vital_signs_model.dart';
 import '../core/constants/ble_uuids.dart';
@@ -15,6 +16,11 @@ class BleService {
   final _vitalsController  = StreamController<VitalSignsModel>.broadcast();
   final _seizureController = StreamController<SeizureEvent>.broadcast();
   final _batteryController = StreamController<int>.broadcast();
+
+  String?  _uid;
+  DateTime _lastFirestoreWrite = DateTime.fromMillisecondsSinceEpoch(0);
+
+  void setPatientUid(String uid) => _uid = uid;
 
   Stream<VitalSignsModel> get vitalsStream  => _vitalsController.stream;
   Stream<SeizureEvent>    get seizureStream => _seizureController.stream;
@@ -84,8 +90,24 @@ class BleService {
   void _onVitalsUpdate(List<int> data) {
     if (data.length < 30) return;
     try {
-      _vitalsController.add(VitalSignsModel.fromBleBytes(data));
+      final vitals = VitalSignsModel.fromBleBytes(data);
+      _vitalsController.add(vitals);
+      _maybeWriteSignal(vitals);
     } catch (_) {}
+  }
+
+  void _maybeWriteSignal(VitalSignsModel v) {
+    final uid = _uid;
+    if (uid == null) return;
+    final now = DateTime.now();
+    if (now.difference(_lastFirestoreWrite).inSeconds < 10) return;
+    _lastFirestoreWrite = now;
+    FirebaseFirestore.instance.collection('signaux').add({
+      'patient_id':    uid,
+      'fc_bpm':        v.heartRate,
+      'gsr_normalise': v.gsrValue,
+      'timestamp':     FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> disconnect() async {

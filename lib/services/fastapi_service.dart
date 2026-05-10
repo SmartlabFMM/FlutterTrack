@@ -3,6 +3,7 @@
 class FastApiService {
   FastApiService._();
 
+  // ignore: unused_field — sera utilisé quand le serveur FastAPI sera en prod
   static const String _baseUrl = 'http://YOUR_FASTAPI_SERVER:8000';
 
   /// Prédit le score de crise à partir des données capteurs.
