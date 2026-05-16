@@ -1,0 +1,30 @@
+{
+  "scaler_type": "RobustScaler",
+  "note": "Appliqu\u00e9 uniquement sur les habitudes. FC/GSR utilisent les baselines patient.",
+  "habits": {
+    "features": [
+      "medication_taken",
+      "alcohol",
+      "sport",
+      "stress_level",
+      "sleep_hours",
+      "hydration"
+    ],
+    "center": [
+      1.0,
+      0.0,
+      0.0,
+      2.0,
+      6.0,
+      5.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0,
+      2.0,
+      2.5,
+      3.0
+    ]
+  }
+}
