@@ -1,0 +1,75 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Lecture sécurisée du rôle : retourne '' si document absent ou champ manquant
+    function userRole() {
+      return isAuth() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '')
+        : '';
+    }
+
+    function isAuth()    { return request.auth != null; }
+    function isAdmin()   { return userRole() == 'admin'; }
+    function isDoctor()  { return userRole() == 'doctor'; }
+    function isPatient() { return userRole() == 'patient'; }
+    function isFamily()  { return userRole() == 'family'; }
+    function isOwner(uid){ return isAuth() && request.auth.uid == uid; }
+
+    // Lecture du linkedPatientId de l'utilisateur courant
+    function myLinkedPatientId() {
+      return isAuth() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('patientId', '')
+        : '';
+    }
+
+    // ── users ───────────────────────────────────────────────────────
+    match /users/{uid} {
+      allow read, write: if isAdmin();
+      allow read, write: if isOwner(uid);
+      allow read:        if isDoctor();
+      allow read:        if isFamily() && myLinkedPatientId() == uid;
+    }
+
+    // ── crises ──────────────────────────────────────────────────────
+    match /crises/{id} {
+      allow read, write: if isAdmin();
+      allow read, write: if isDoctor();
+      allow read, write: if isPatient() &&
+          (resource == null || resource.data.patientId == request.auth.uid);
+      allow read:        if isFamily() &&
+          myLinkedPatientId() == resource.data.patientId;
+      allow create:      if isAuth();
+    }
+
+    // ── habitudes_patient ───────────────────────────────────────────
+    match /habitudes_patient/{id} {
+      allow read, write: if isAdmin();
+      allow read:        if isDoctor();
+      allow read, write: if isAuth() &&
+          (resource == null || resource.data.patient_id == request.auth.uid);
+      allow create:      if isAuth() &&
+          request.resource.data.patient_id == request.auth.uid;
+    }
+
+    // ── signaux ─────────────────────────────────────────────────────
+    match /signaux/{id} {
+      allow read, write: if isAdmin();
+      allow read:        if isDoctor();
+      allow write:       if isAuth();
+    }
+
+    // ── confirmations_patient ────────────────────────────────────────
+    match /confirmations_patient/{id} {
+      allow read, write: if isAdmin();
+      allow read:        if isDoctor();
+      allow read, write: if isAuth();
+    }
+
+    // ── seizures (stats admin) ───────────────────────────────────────
+    match /seizures/{id} {
+      allow read, write: if isAdmin();
+      allow read:        if isDoctor();
+    }
+  }
+}

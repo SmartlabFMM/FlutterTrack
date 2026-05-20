@@ -6,6 +6,7 @@ class VitalSignsModel {
   final double   gyroX,  gyroY,  gyroZ;
   final int      heartRate;
   final double   gsrValue;
+  final double   spo2;
   final DateTime timestamp;
 
   const VitalSignsModel({
@@ -13,6 +14,7 @@ class VitalSignsModel {
     required this.gyroX,  required this.gyroY,  required this.gyroZ,
     required this.heartRate,
     required this.gsrValue,
+    this.spo2 = 0,
     required this.timestamp,
   });
 
@@ -33,6 +35,8 @@ class VitalSignsModel {
       gyroZ:     buf.getFloat32(20, Endian.little),
       heartRate: buf.getUint16(24,  Endian.little),
       gsrValue:  buf.getFloat32(26, Endian.little),
+      // SpO₂ : octet 30 (uint8, 0–100 %). Absent sur firmware ancien → 0.
+      spo2:      bytes.length > 30 ? buf.getUint8(30).toDouble() : 0,
       timestamp: DateTime.now(),
     );
   }

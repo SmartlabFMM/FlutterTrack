@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/seizure_provider.dart';
 
 class PatientDetailScreen extends ConsumerWidget {
@@ -19,6 +20,11 @@ class PatientDetailScreen extends ConsumerWidget {
     final detail = patientRaw.isNotEmpty
         ? _mapFirestoreToDetail(patientRaw)
         : _defaultDetail('Patient #$patientId');
+
+    // Observateur = ne peut pas modifier les données du patient
+    final doctorUid  = ref.watch(authProvider).user?.uid ?? '';
+    final doctorData = ref.watch(patientDataProvider(doctorUid)).valueOrNull ?? {};
+    final isObserver = doctorData['doctorType'] == 'observateur';
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -44,7 +50,9 @@ class PatientDetailScreen extends ConsumerWidget {
                   // ── Infos médicales ──────────────────────
                   _MedicalInfoCard(
                     detail: detail,
-                    onEdit: () => _showEditMedicalSheet(context, ref, detail, name),
+                    onEdit: isObserver
+                      ? null
+                      : () => _showEditMedicalSheet(context, ref, detail, name),
                   ),
                   const SizedBox(height: 14),
 
@@ -71,6 +79,7 @@ class PatientDetailScreen extends ConsumerWidget {
                     patientId: patientId,
                     ref: ref,
                     context: context,
+                    canEdit: !isObserver,
                   ),
                   const SizedBox(height: 20),
 
@@ -101,7 +110,9 @@ class PatientDetailScreen extends ConsumerWidget {
                     title: 'Ajouter note clinique',
                     subtitle: 'Observations médicales & traitements',
                     color: AppColors.primaryDark,
-                    onTap: () => _showNoteDialog(context, ref, name)),
+                    onTap: isObserver
+                      ? null
+                      : () => _showNoteDialog(context, ref, name)),
                   // Infos personnelles : lecture seule
                   _DoctorActionTile(
                     icon: Icons.person_rounded,
@@ -109,13 +120,14 @@ class PatientDetailScreen extends ConsumerWidget {
                     subtitle: 'Âge, téléphone, adresse',
                     color: AppColors.primary,
                     onTap: () => _showPersonalInfoSheet(context, detail)),
-                  // RDV : lecture seule (planifié par l'admin)
                   _DoctorActionTile(
                     icon: Icons.calendar_today_rounded,
                     title: 'Prochain rendez-vous',
                     subtitle: detail['nextRdv'] as String? ?? 'Aucun RDV planifié',
                     color: const Color(0xFF7C3AED),
-                    onTap: null),
+                    onTap: isObserver
+                      ? null
+                      : () => _showRdvSheet(context, ref)),
                   _DoctorActionTile(
                     icon: Icons.call_rounded,
                     title: 'Appeler le patient',
@@ -380,6 +392,160 @@ class PatientDetailScreen extends ConsumerWidget {
                 ),
               ]),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+  // ── Planification rendez-vous ─────────────────────────────────
+  void _showRdvSheet(BuildContext context, WidgetRef ref) {
+    DateTime? pickedDate;
+    final timeCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setS) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBorder,
+                    borderRadius: BorderRadius.circular(2)))),
+                const SizedBox(height: 16),
+                Row(children: [
+                  Container(
+                    width: 36, height: 36,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEDE9FE),
+                      borderRadius: BorderRadius.circular(10)),
+                    child: const Icon(Icons.event_rounded,
+                      color: Color(0xFF7C3AED), size: 20)),
+                  const SizedBox(width: 12),
+                  const Text('Planifier un rendez-vous',
+                    style: TextStyle(fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary)),
+                ]),
+                const SizedBox(height: 20),
+
+                // Sélecteur de date
+                GestureDetector(
+                  onTap: () async {
+                    final d = await showDatePicker(
+                      context: ctx,
+                      initialDate:
+                        DateTime.now().add(const Duration(days: 1)),
+                      firstDate: DateTime.now(),
+                      lastDate:
+                        DateTime.now().add(const Duration(days: 365)),
+                      locale: const Locale('fr'),
+                    );
+                    if (d != null) setS(() => pickedDate = d);
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceAlt,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.cardBorder)),
+                    child: Row(children: [
+                      const Icon(Icons.event_rounded,
+                        color: Color(0xFF7C3AED), size: 18),
+                      const SizedBox(width: 10),
+                      Text(
+                        pickedDate == null
+                          ? 'Choisir une date'
+                          : DateFormat('EEEE d MMMM yyyy', 'fr')
+                              .format(pickedDate!),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: pickedDate == null
+                            ? AppColors.textHint : AppColors.textPrimary,
+                          fontWeight: FontWeight.w500)),
+                    ]),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Heure
+                TextField(
+                  controller: timeCtrl,
+                  keyboardType: TextInputType.datetime,
+                  decoration: InputDecoration(
+                    labelText: 'Heure (ex: 10:30)',
+                    prefixIcon: const Icon(
+                      Icons.access_time_rounded, size: 18),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: AppColors.surfaceAlt),
+                ),
+                const SizedBox(height: 20),
+
+                Row(children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 48),
+                        side: const BorderSide(color: AppColors.cardBorder),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12))),
+                      child: const Text('Annuler',
+                        style: TextStyle(color: AppColors.textSecondary)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        if (pickedDate == null ||
+                            timeCtrl.text.trim().isEmpty) return;
+                        final label =
+                          '${DateFormat('EEEE d MMMM', 'fr').format(pickedDate!)}'
+                          ' · ${timeCtrl.text.trim()}';
+                        await FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(patientId)
+                          .set({'nextRdv': label},
+                            SetOptions(merge: true));
+                        ref.invalidate(patientDataProvider(patientId));
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            const SnackBar(
+                              content: Text('Rendez-vous planifié'),
+                              backgroundColor: Color(0xFF7C3AED),
+                              behavior: SnackBarBehavior.floating));
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(0, 48),
+                        backgroundColor: const Color(0xFF7C3AED),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12))),
+                      child: const Text('Confirmer',
+                        style: TextStyle(color: Colors.white,
+                          fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ]),
+              ],
+            ),
           ),
         ),
       ),
@@ -930,15 +1096,15 @@ class _PatientHero extends StatelessWidget {
 // ─── Informations médicales ───────────────────────────────────
 class _MedicalInfoCard extends StatelessWidget {
   final Map<String, dynamic> detail;
-  final VoidCallback          onEdit;
-  const _MedicalInfoCard({required this.detail, required this.onEdit});
+  final VoidCallback?         onEdit;
+  const _MedicalInfoCard({required this.detail, this.onEdit});
 
   @override
   Widget build(BuildContext context) => _SectionCard(
     title: 'Informations médicales',
     icon: Icons.medical_information_rounded,
     iconColor: AppColors.primary,
-    action: GestureDetector(
+    action: onEdit == null ? null : GestureDetector(
       onTap: onEdit,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -992,7 +1158,7 @@ class _ComplianceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     if (compliance == null) {
       return _SectionCard(
-        title: 'Compliance au traitement',
+        title: 'Observance thérapeutique',
         icon: Icons.task_alt_rounded,
         iconColor: AppColors.textHint,
         child: const Text('Aucune donnée — le patient n\'a pas encore utilisé l\'app',
@@ -1006,7 +1172,7 @@ class _ComplianceCard extends StatelessWidget {
     final label = pct >= 90 ? 'Excellente' : pct >= 70 ? 'Correcte' : 'Insuffisante';
 
     return _SectionCard(
-      title: 'Compliance au traitement',
+      title: 'Observance thérapeutique',
       icon: Icons.task_alt_rounded,
       iconColor: color,
       child: Column(children: [
@@ -1138,10 +1304,11 @@ class _ClinicalNotesCard extends StatelessWidget {
   final String patientId;
   final WidgetRef ref;
   final BuildContext context;
+  final bool canEdit;
   const _ClinicalNotesCard({
     required this.notes, required this.patientName,
     required this.patientId, required this.ref,
-    required this.context});
+    required this.context, this.canEdit = true});
 
   Future<void> _deleteNote(Map<String, dynamic> note) async {
     final confirm = await showDialog<bool>(
@@ -1218,15 +1385,16 @@ class _ClinicalNotesCard extends StatelessWidget {
                   ),
                 ),
               ),
-              // Bouton supprimer
-              IconButton(
-                icon: const Icon(Icons.delete_outline_rounded,
-                  size: 18, color: AppColors.danger),
-                tooltip: 'Supprimer',
-                onPressed: () => _deleteNote(n),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
+              // Bouton supprimer (observateur = masqué)
+              if (canEdit)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded,
+                    size: 18, color: AppColors.danger),
+                  tooltip: 'Supprimer',
+                  onPressed: () => _deleteNote(n),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
             ],
           );
         }).toList()),

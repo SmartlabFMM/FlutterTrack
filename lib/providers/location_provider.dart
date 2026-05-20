@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
-enum LocationTrigger { sos, seizure, riskScore }
+enum LocationTrigger { sos, seizure, riskScore, always }
 
 // ── Modèle localisation ───────────────────────────────────────
 class LocationData {
@@ -38,7 +38,6 @@ class LocationSharingState {
 // ── Notifier patient ──────────────────────────────────────────
 class LocationSharingNotifier extends StateNotifier<LocationSharingState> {
   Timer? _periodicTimer;
-  Timer? _stopTimer;
 
   LocationSharingNotifier() : super(const LocationSharingState());
 
@@ -57,18 +56,14 @@ class LocationSharingNotifier extends StateNotifier<LocationSharingState> {
 
     await _sendPosition(uid);
 
+    // Mise à jour toutes les 30 secondes (continu, sans limite de durée)
     _periodicTimer = Timer.periodic(
-      const Duration(seconds: 10), (_) => _sendPosition(uid));
-
-    // RGPD : arrêt automatique après 30 minutes
-    _stopTimer = Timer(const Duration(minutes: 30), () => stopSharing(uid));
+        const Duration(seconds: 30), (_) => _sendPosition(uid));
   }
 
   Future<void> stopSharing(String uid) async {
     _periodicTimer?.cancel();
-    _stopTimer?.cancel();
     _periodicTimer = null;
-    _stopTimer     = null;
 
     await FirebaseFirestore.instance.collection('users').doc(uid).update({
       'location': {
@@ -101,7 +96,6 @@ class LocationSharingNotifier extends StateNotifier<LocationSharingState> {
   @override
   void dispose() {
     _periodicTimer?.cancel();
-    _stopTimer?.cancel();
     super.dispose();
   }
 }

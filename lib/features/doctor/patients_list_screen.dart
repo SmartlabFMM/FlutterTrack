@@ -9,7 +9,38 @@ import '../../providers/auth_provider.dart';
 
 // ── Provider patients ─────────────────────────────────────────
 final patientsListProvider =
-    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+    FutureProvider.family<List<Map<String, dynamic>>, String>(
+        (ref, doctorUid) async {
+  // Vérifie si ce médecin est un médecin de famille (lié à un seul patient)
+  final doctorDoc = await FirebaseFirestore.instance
+      .collection('users')
+      .doc(doctorUid)
+      .get();
+
+  final linkedPatientId =
+      doctorDoc.data()?['linkedPatientId'] as String?;
+
+  if (linkedPatientId != null) {
+    // Médecin de famille : affiche uniquement le patient lié
+    final patientDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(linkedPatientId)
+        .get();
+    if (!patientDoc.exists) return [];
+    final data = patientDoc.data()!;
+    return [
+      {
+        'id':          patientDoc.id,
+        'name':        data['nom']          ?? 'Inconnu',
+        'age':         data['age']          ?? 0,
+        'status':      data['status']       ?? 'offline',
+        'lastSeizure': data['lastSeizure']  ?? '—',
+        'monthCount':  data['monthCount']   ?? 0,
+      }
+    ];
+  }
+
+  // Médecin général : affiche tous les patients
   final snapshot = await FirebaseFirestore.instance
       .collection('users')
       .where('role', isEqualTo: 'patient')
@@ -19,11 +50,11 @@ final patientsListProvider =
     final data = doc.data();
     return {
       'id':          doc.id,
-      'name':        data['nom']       ?? 'Inconnu',
-      'age':         data['age']       ?? 0,
-      'status':      data['status']    ?? 'offline',
-      'lastSeizure': data['lastSeizure'] ?? '—',
-      'monthCount':  data['monthCount']  ?? 0,
+      'name':        data['nom']          ?? 'Inconnu',
+      'age':         data['age']          ?? 0,
+      'status':      data['status']       ?? 'offline',
+      'lastSeizure': data['lastSeizure']  ?? '—',
+      'monthCount':  data['monthCount']   ?? 0,
     };
   }).toList();
 });
@@ -65,7 +96,7 @@ class _PatientsListScreenState extends ConsumerState<PatientsListScreen> {
   @override
   Widget build(BuildContext context) {
     final user     = ref.watch(authProvider).user!;
-    final patients = ref.watch(patientsListProvider);
+    final patients = ref.watch(patientsListProvider(user.uid));
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -90,7 +121,9 @@ class _PatientsListScreenState extends ConsumerState<PatientsListScreen> {
                     patientCount: all.length,
                     seizureCount: all.where(
                       (p) => p['status'] == 'seizure').length,
-                    onRefresh: () => ref.invalidate(patientsListProvider),
+                    stableCount: all.where(
+                      (p) => p['status'] == 'stable').length,
+                    onRefresh: () => ref.invalidate(patientsListProvider(user.uid)),
                   ),
                 ),
 
@@ -188,12 +221,12 @@ class _PatientsListScreenState extends ConsumerState<PatientsListScreen> {
 // ─── Hero banner médecin ──────────────────────────────────────
 class _DoctorHeroBanner extends StatelessWidget {
   final String   doctorName, initial;
-  final int      patientCount, seizureCount;
+  final int      patientCount, seizureCount, stableCount;
   final VoidCallback onRefresh;
   const _DoctorHeroBanner({
     required this.doctorName, required this.initial,
     required this.patientCount, required this.seizureCount,
-    required this.onRefresh,
+    required this.stableCount, required this.onRefresh,
   });
 
   @override
@@ -276,7 +309,7 @@ class _DoctorHeroBanner extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(horizontal: 20),
                 color: Colors.white.withValues(alpha: 0.2)),
               _HeroStat(
-                value: '${patientCount - seizureCount}',
+                value: '$stableCount',
                 label: 'Stables',
                 icon: Icons.check_circle_rounded,
                 color: Colors.greenAccent),
@@ -356,7 +389,7 @@ class _StatusSummaryRow extends StatelessWidget {
         const SizedBox(width: 8),
         _StatusChip(
           count:      offlineCount,
-          label:      'Hors ligne',
+          label:      'Bracelet hors ligne',
           status:     'offline',
           color:      AppColors.textHint,
           icon:       Icons.wifi_off_rounded,
@@ -443,7 +476,7 @@ class _PatientRowCard extends StatelessWidget {
                       : AppColors.textHint;
     final statusLabel = status == 'seizure' ? 'Alerte crise'
                       : status == 'stable'  ? 'Stable'
-                      : 'Hors ligne';
+                      : 'Bracelet hors ligne';
     final isAlert = status == 'seizure';
     final initials = (patient['name'] as String)
       .split(' ').take(2).map((w) => w[0]).join();

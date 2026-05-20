@@ -30,6 +30,7 @@ import 'features/admin/admin_dashboard_screen.dart';
 import 'features/admin/admin_accounts_screen.dart';
 import 'features/admin/admin_create_account_screen.dart';
 import 'features/admin/admin_user_detail_screen.dart';
+import 'features/admin/admin_settings_screen.dart';
 import 'core/widgets/reminder_overlay.dart';
 import 'core/widgets/medical_background.dart';
 import 'features/onboarding/onboarding_screen.dart';
@@ -167,6 +168,8 @@ final _routerProvider = Provider<GoRouter>((ref) {
             builder: (_, __) => const AdminDashboardScreen()),
           GoRoute(path: '/admin/accounts',
             builder: (_, __) => const AdminAccountsScreen()),
+          GoRoute(path: '/admin/settings',
+            builder: (_, __) => const AdminSettingsScreen()),
         ],
       ),
       // ── Routes admin hors shell ──────────────────────
@@ -513,8 +516,8 @@ class _AdminShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
-    final idx = ['/admin/dashboard', '/admin/accounts']
-      .indexOf(location).clamp(0, 1);
+    final idx = ['/admin/dashboard', '/admin/accounts', '/admin/settings']
+      .indexOf(location).clamp(0, 2);
 
     return Scaffold(
       body: child,
@@ -531,7 +534,7 @@ class _AdminShell extends StatelessWidget {
         child: NavigationBar(
           selectedIndex: idx,
           onDestinationSelected: (i) => context.go([
-            '/admin/dashboard', '/admin/accounts'][i]),
+            '/admin/dashboard', '/admin/accounts', '/admin/settings'][i]),
           destinations: const [
             NavigationDestination(
               icon: Icon(Icons.dashboard_outlined),
@@ -541,6 +544,10 @@ class _AdminShell extends StatelessWidget {
               icon: Icon(Icons.manage_accounts_outlined),
               selectedIcon: Icon(Icons.manage_accounts_rounded),
               label: 'Comptes'),
+            NavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings_rounded),
+              label: 'Paramètres'),
           ],
         ),
       ),

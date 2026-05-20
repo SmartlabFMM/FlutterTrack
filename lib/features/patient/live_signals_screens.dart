@@ -31,6 +31,7 @@ class _LiveSignalsScreenState extends ConsumerState<LiveSignalsScreen> {
   final List<FlSpot> _accelData = [];
   final List<FlSpot> _heartData = [];
   final List<FlSpot> _gsrData   = [];
+  final List<FlSpot> _spo2Data  = [];
   int _tick = 0;
 
   @override
@@ -45,11 +46,14 @@ class _LiveSignalsScreenState extends ConsumerState<LiveSignalsScreen> {
           _accelData.add(FlSpot(_tick.toDouble(), v.accelMagnitude));
           _heartData.add(FlSpot(_tick.toDouble(), v.heartRate.toDouble()));
           _gsrData.add(FlSpot(_tick.toDouble(), v.gsrValue * 100));
+          if (v.spo2 > 0)
+            _spo2Data.add(FlSpot(_tick.toDouble(), v.spo2));
           if (_accelData.length > 60) {
             _accelData.removeAt(0);
             _heartData.removeAt(0);
             _gsrData.removeAt(0);
           }
+          if (_spo2Data.length > 60) _spo2Data.removeAt(0);
         });
       }
     });
@@ -127,6 +131,17 @@ class _LiveSignalsScreenState extends ConsumerState<LiveSignalsScreen> {
                   color: AppColors.gsrColor,
                   spots: _gsrData,
                   minY: 0, maxY: 100,
+                  unit: '%',
+                ),
+                const SizedBox(height: 12),
+
+                // ── Graphique SpO₂ ───────────────────────────
+                _SignalCard(
+                  title: 'Saturation en oxygène (SpO₂)',
+                  subtitle: "Taux d'oxygène dans le sang (%)",
+                  color: AppColors.spo2Color,
+                  spots: _spo2Data,
+                  minY: 80, maxY: 100,
                   unit: '%',
                 ),
               ],
@@ -384,6 +399,7 @@ class _VitalsSummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final spo2Alert = vitals.spo2 > 0 && vitals.spo2 < 95;
     return Row(children: [
       _MiniStat(label: 'FC', value: '${vitals.heartRate}',
         unit: 'bpm', color: AppColors.heartColor,
@@ -399,6 +415,12 @@ class _VitalsSummaryRow extends StatelessWidget {
         value: (vitals.gsrValue * 100).toStringAsFixed(0),
         unit: '%', color: AppColors.gsrColor,
         alert: vitals.isGsrElevated),
+      const SizedBox(width: 8),
+      _MiniStat(
+        label: 'SpO₂',
+        value: vitals.spo2 > 0 ? vitals.spo2.toStringAsFixed(0) : '—',
+        unit: '%', color: AppColors.spo2Color,
+        alert: spo2Alert),
     ]);
   }
 }

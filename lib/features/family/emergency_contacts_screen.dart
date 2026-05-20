@@ -411,7 +411,7 @@ class _AddContactSheetState extends State<_AddContactSheet> {
           decoration: const InputDecoration(
             labelText: 'Relation',
             prefixIcon: Icon(Icons.group_rounded)),
-          items: ['Famille', 'Ami(e)', 'Voisin(e)', 'Autre']
+          items: ['Famille', 'Médecin']
               .map((r) => DropdownMenuItem(value: r, child: Text(r)))
               .toList(),
           onChanged: (v) => setState(() => _role = v ?? _role),

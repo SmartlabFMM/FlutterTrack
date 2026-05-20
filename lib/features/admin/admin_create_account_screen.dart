@@ -16,8 +16,8 @@ class _AdminCreateAccountScreenState
     extends ConsumerState<AdminCreateAccountScreen> {
   final _formKey   = GlobalKey<FormState>();
   UserRole _role   = UserRole.patient;
-  bool _obscure    = true;
-  bool _loading    = false;
+  bool _obscure = true;
+  bool _loading = false;
 
   // Communs
   final _nameCtrl  = TextEditingController();
@@ -69,6 +69,8 @@ class _AdminCreateAccountScreenState
       if (_role == UserRole.doctor) {
         if (_specCtrl.text.isNotEmpty)
           extra['specialite'] = _specCtrl.text.trim();
+        if (_linkedPatientId != null)
+          extra['linkedPatientId'] = _linkedPatientId!;
       }
       if (_role == UserRole.family) {
         if (_phoneCtrl.text.isNotEmpty)
@@ -108,10 +110,6 @@ class _AdminCreateAccountScreenState
   Widget build(BuildContext context) {
     final users = ref.watch(allUsersProvider);
 
-    // Vérifie si un médecin existe déjà
-    final doctorExists = users.valueOrNull
-      ?.any((u) => u.role == UserRole.doctor) ?? false;
-
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
@@ -143,8 +141,7 @@ class _AdminCreateAccountScreenState
                 icon: Icons.medical_services_rounded,
                 color: AppColors.tealDark,
                 selected: _role == UserRole.doctor,
-                disabled: doctorExists,
-                onTap: doctorExists ? null : () => setState(() {
+                onTap: () => setState(() {
                   _role = UserRole.doctor; _resetFields(); })),
               const SizedBox(width: 8),
               _RoleBtn(
@@ -187,6 +184,46 @@ class _AdminCreateAccountScreenState
               const _SectionTitle('Informations professionnelles'),
               const SizedBox(height: 12),
               _Field('Spécialité', Icons.work_rounded, _specCtrl),
+              const SizedBox(height: 16),
+              const _SectionTitle('Patient lié'),
+              const SizedBox(height: 12),
+              users.when(
+                data: (list) {
+                  final patients = list
+                    .where((u) => u.role == UserRole.patient)
+                    .toList();
+                  if (patients.isEmpty) {
+                    return Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceAlt,
+                        borderRadius: BorderRadius.circular(12)),
+                      child: const Text(
+                        'Aucun patient enregistré. Créez d\'abord un compte patient.',
+                        style: TextStyle(fontSize: 13,
+                          color: AppColors.textSecondary)));
+                  }
+                  return DropdownButtonFormField<String>(
+                    value: _linkedPatientId,
+                    decoration: InputDecoration(
+                      labelText: 'Sélectionner le patient *',
+                      prefixIcon: const Icon(
+                        Icons.person_search_rounded, size: 18),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                      filled: true,
+                      fillColor: AppColors.surfaceAlt),
+                    items: patients.map((p) => DropdownMenuItem(
+                      value: p.uid,
+                      child: Text(p.name))).toList(),
+                    onChanged: (v) =>
+                      setState(() => _linkedPatientId = v),
+                  );
+                },
+                loading: () => const Center(
+                  child: CircularProgressIndicator()),
+                error: (_, __) => const SizedBox(),
+              ),
             ],
 
             // ── Champs Famille ───────────────────────────────

@@ -663,7 +663,7 @@ class _ComplianceSection extends StatelessWidget {
     if (compliance == null) {
       return _Card(
         icon: Icons.task_alt_rounded, iconColor: AppColors.textHint,
-        title: 'Compliance au traitement',
+        title: 'Observance thérapeutique',
         child: const _EmptyRow('Aucune donnée de compliance disponible'),
       );
     }
@@ -674,7 +674,7 @@ class _ComplianceSection extends StatelessWidget {
 
     return _Card(
       icon: Icons.task_alt_rounded, iconColor: color,
-      title: 'Compliance au traitement',
+      title: 'Observance thérapeutique',
       child: Column(children: [
         Row(children: [
           Text('$pct%', style: TextStyle(

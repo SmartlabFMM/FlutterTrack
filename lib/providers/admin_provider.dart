@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user_model.dart';
@@ -60,13 +61,24 @@ Future<String> createUserAsAdmin({
       email: email, password: password);
     final uid = cred.user!.uid;
 
+    // Premier médecin = principal, les suivants = observateur
+    String? doctorType;
+    if (role == UserRole.doctor) {
+      final existing = await _db.collection('users')
+        .where('role', isEqualTo: 'doctor')
+        .limit(1)
+        .get();
+      doctorType = existing.docs.isEmpty ? 'principal' : 'observateur';
+    }
+
     await _db.collection('users').doc(uid).set({
       'uid':       uid,
       'nom':       name,
       'email':     email,
       'role':      role.name,
       'patientId': linkedPatientId ?? uid,
-      if (doctorId != null) 'doctorId': doctorId,
+      if (doctorId != null)   'doctorId':   doctorId,
+      if (doctorType != null) 'doctorType': doctorType,
       'disabled':  false,
       'isActive':  true,
       'createdAt': FieldValue.serverTimestamp(),

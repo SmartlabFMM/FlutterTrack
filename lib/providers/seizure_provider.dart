@@ -29,3 +29,14 @@ final patientDataProvider =
       .get();
   return doc.exists ? doc.data()! : {};
 });
+
+/// Score de prévention en temps réel depuis users/{uid}.preventionScore
+final preventionScoreProvider =
+    StreamProvider.family.autoDispose<double?, String>((ref, uid) {
+  return FirebaseFirestore.instance
+      .collection('users')
+      .doc(uid)
+      .snapshots()
+      .map((snap) =>
+          (snap.data()?['preventionScore'] as num?)?.toDouble());
+});

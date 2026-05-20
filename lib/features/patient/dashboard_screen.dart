@@ -173,6 +173,10 @@ class PatientDashboardScreen extends ConsumerWidget {
                       loading: () => const _SkeletonCard(height: 80),
                       error: (_, __) => const SizedBox(),
                     ),
+                    const SizedBox(height: 12),
+
+                    // ── Score de prévention ───────────────────
+                    _PreventionScoreCard(uid: uid),
                     const SizedBox(height: 24),
 
                     // ── Bonnes habitudes ──────────────────────
@@ -312,7 +316,7 @@ class _HeroBanner extends StatelessWidget {
                   width: 1, height: 40,
                   color: Colors.white.withValues(alpha: 0.2),
                   margin: const EdgeInsets.symmetric(horizontal: 16)),
-                _HeroStat(label: 'Protection',
+                const _HeroStat(label: 'Protection',
                   value: 'Actif 24/7',
                   icon: Icons.shield_rounded,
                   color: Colors.lightBlueAccent),
@@ -825,6 +829,92 @@ class _RiskScoreCard extends StatelessWidget {
         const Text('Score de risque',
           style: TextStyle(fontSize: 11,
             color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+      ]),
+    );
+  }
+}
+
+// ─── Score de prévention ──────────────────────────────────────
+class _PreventionScoreCard extends ConsumerWidget {
+  final String uid;
+  const _PreventionScoreCard({required this.uid});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scoreAsync = ref.watch(preventionScoreProvider(uid));
+    final score = scoreAsync.valueOrNull;
+
+    final Color color;
+    final Color bg;
+    final String label;
+    final IconData icon;
+
+    if (score == null) {
+      color = AppColors.textHint;
+      bg    = AppColors.surfaceAlt;
+      label = 'En attente';
+      icon  = Icons.shield_outlined;
+    } else if (score >= 0.70) {
+      color = AppColors.seizureRed;
+      bg    = AppColors.dangerLight;
+      label = 'Risque élevé';
+      icon  = Icons.warning_amber_rounded;
+    } else if (score >= 0.40) {
+      color = AppColors.warning;
+      bg    = AppColors.warningLight;
+      label = 'Risque modéré';
+      icon  = Icons.shield_outlined;
+    } else {
+      color = AppColors.teal;
+      bg    = AppColors.tealPale;
+      label = 'Risque faible';
+      icon  = Icons.shield_rounded;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.07),
+            blurRadius: 14,
+            offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Row(children: [
+        Container(
+          width: 48, height: 48,
+          decoration: BoxDecoration(
+            color: bg, borderRadius: BorderRadius.circular(14)),
+          child: Icon(icon, color: color, size: 24)),
+        const SizedBox(width: 14),
+        const Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Score de prévention',
+              style: TextStyle(fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary)),
+            SizedBox(height: 2),
+            Text('Risque de crise basé sur vos habitudes',
+              style: TextStyle(fontSize: 11,
+                color: AppColors.textSecondary)),
+          ])),
+        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text(
+            score != null ? '${(score * 100).toStringAsFixed(0)}%' : '—',
+            style: TextStyle(fontSize: 22,
+              fontWeight: FontWeight.w800, color: color)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: bg, borderRadius: BorderRadius.circular(20)),
+            child: Text(label,
+              style: TextStyle(fontSize: 10,
+                fontWeight: FontWeight.w700, color: color))),
+        ]),
       ]),
     );
   }

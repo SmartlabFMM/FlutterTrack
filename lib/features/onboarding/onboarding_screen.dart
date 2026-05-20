@@ -1,72 +1,62 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/epitrack_logo.dart';
 
-// ── Données des pages ─────────────────────────────────────────
+// ── Modèles ───────────────────────────────────────────────────
+class _Feature {
+  final IconData icon;
+  final String   title;
+  final String   description;
+  const _Feature({required this.icon, required this.title,
+      required this.description});
+}
+
 class _OnboardingPage {
-  final IconData  icon;
-  final Color     iconColor;
-  final Gradient  gradient;
-  final String    title;
-  final String    subtitle;
+  final IconData       icon;
+  final String         title;
+  final String?        subtitle;
+  final List<_Feature> features;
 
   const _OnboardingPage({
     required this.icon,
-    required this.iconColor,
-    required this.gradient,
     required this.title,
-    required this.subtitle,
+    this.subtitle,
+    this.features = const [],
   });
 }
 
+// ── Données des 3 pages ───────────────────────────────────────
 const _pages = [
   _OnboardingPage(
-    icon:      Icons.monitor_heart_rounded,
-    iconColor: AppColors.primary,
-    gradient:  AppColors.heroGradientPatient,
-    title:     'Surveillance cardiaque\net des mouvements',
+    icon:  Icons.monitor_heart_rounded,
+    title: 'Surveillance cardiaque\net des mouvements',
     subtitle:
-      'EpiTrack surveille en continu votre fréquence cardiaque, '
-      'vos mouvements et votre conductance cutanée grâce à un bracelet '
-      'connecté, 24h/24.',
+        'Bracelet connecté 24h/24 — fréquence cardiaque, mouvements '
+        'et conductance cutanée.',
   ),
   _OnboardingPage(
-    icon:      Icons.notifications_active_rounded,
-    iconColor: AppColors.primary,
-    gradient:  AppColors.heroGradientPatient,
-    title:     'Détection automatique\ndes crises',
-    subtitle:
-      'L\'application détecte les crises d\'épilepsie en temps réel '
-      'et envoie immédiatement des alertes à votre médecin et à vos proches.',
+    icon:  Icons.shield_rounded,
+    title: 'Détection &\nPrévention',
+    features: [
+      _Feature(
+        icon:        Icons.notifications_active_rounded,
+        title:       'Détection automatique des crises',
+        description: 'Alertes instantanées envoyées à votre médecin et vos proches.',
+      ),
+      _Feature(
+        icon:        Icons.eco_rounded,
+        title:       'Prévention des crises',
+        description:
+            'Analyse du sommeil, stress et hydratation pour anticiper les risques.',
+      ),
+    ],
   ),
   _OnboardingPage(
-    icon:      Icons.shield_rounded,
-    iconColor: AppColors.tealDark,
-    gradient:  LinearGradient(
-      begin: Alignment.topLeft,
-      end:   Alignment.bottomRight,
-      colors: [Color(0xFF1A7F78), Color(0xFF2E9088), Color(0xFF3DADA0)],
-    ),
-    title:     'Prévention\ndes crises',
-    subtitle:
-      'Grâce à l\'analyse de vos habitudes de vie — sommeil, stress, '
-      'hydratation et activité — EpiTrack anticipe les risques et vous '
-      'aide à réduire la fréquence des crises.',
-  ),
-  _OnboardingPage(
-    icon:      Icons.people_rounded,
-    iconColor: AppColors.tealDark,
-    gradient:  LinearGradient(
-      begin: Alignment.topLeft,
-      end:   Alignment.bottomRight,
-      colors: [Color(0xFF2E9088), Color(0xFF3DADA0), Color(0xFF5EC5B8)],
-    ),
-    title:     'Suivi médical\npartagé',
-    subtitle:
-      'Votre médecin et votre famille consultent vos rapports, '
-      'suivent votre état de santé et restent connectés à votre bien-être.',
+    icon:  Icons.people_rounded,
+    title: 'Suivi médical\npartagé',
+    subtitle: 'Médecin et famille connectés à votre santé en temps réel.',
   ),
 ];
 
@@ -88,7 +78,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
-  Future<void> _finish() async {
+  void _finish() {
     if (mounted) context.go('/login');
   }
 
@@ -105,7 +95,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final page = _pages[_current];
     final isLast = _current == _pages.length - 1;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -115,11 +104,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         body: Column(
           children: [
 
-            // ── Hero ─────────────────────────────────────────
+            // ── Hero (gradient fixe) ──────────────────────────
             Container(
-              decoration: BoxDecoration(
-                gradient: page.gradient,
-                borderRadius: const BorderRadius.only(
+              decoration: const BoxDecoration(
+                gradient: AppColors.heroGradientPatient,
+                borderRadius: BorderRadius.only(
                   bottomLeft:  Radius.circular(40),
                   bottomRight: Radius.circular(40),
                 ),
@@ -130,7 +119,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
                   child: Column(
                     children: [
-                      // Ligne du haut: logo + skip
+                      // Logo + Passer
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -139,19 +128,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             TextButton(
                               onPressed: _finish,
                               style: TextButton.styleFrom(
-                                foregroundColor: Colors.white.withValues(alpha: 0.8),
+                                foregroundColor:
+                                    Colors.white.withValues(alpha: 0.8),
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 6),
+                                    horizontal: 12, vertical: 6),
                               ),
                               child: const Text('Passer',
                                 style: TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w600)),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600)),
                             ),
                         ],
                       ),
                       const SizedBox(height: 36),
 
-                      // Icône centrale dans cercle
+                      // Icône centrale animée via PageView (index sync)
                       Container(
                         width: 120, height: 120,
                         decoration: BoxDecoration(
@@ -162,7 +153,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             width: 2),
                         ),
                         child: Icon(
-                          page.icon,
+                          _pages[_current].icon,
                           size: 56,
                           color: Colors.white,
                         ),
@@ -174,7 +165,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
 
-            // ── Corps scrollable (PageView) ────────────────────
+            // ── Corps (PageView) ──────────────────────────────
             Expanded(
               child: PageView.builder(
                 controller: _controller,
@@ -184,26 +175,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
 
-            // ── Pied de page fixe ─────────────────────────────
+            // ── Pied de page ──────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(28, 0, 28, 36),
               child: SafeArea(
                 top: false,
                 child: Column(
                   children: [
-                    // Points indicateurs
+                    // Indicateurs de progression
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: List.generate(_pages.length, (i) {
                         final active = i == _current;
-                        return Container(
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
                           margin: const EdgeInsets.symmetric(horizontal: 4),
                           width:  active ? 24 : 8,
                           height: 8,
                           decoration: BoxDecoration(
                             color: active
-                              ? AppColors.primary
-                              : AppColors.cardBorder,
+                                ? AppColors.primary
+                                : AppColors.cardBorder,
                             borderRadius: BorderRadius.circular(4),
                           ),
                         );
@@ -217,7 +209,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       child: Container(
                         height: 54,
                         decoration: BoxDecoration(
-                          gradient: page.gradient,
+                          gradient: AppColors.heroGradientPatient,
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
@@ -234,7 +226,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.white,),
+                                color: Colors.white),
                             ),
                             const SizedBox(width: 8),
                             Icon(
@@ -279,13 +271,61 @@ class _PageBody extends StatelessWidget {
             letterSpacing: -0.5,
           ),
         ),
-        const SizedBox(height: 16),
-        Text(
-          page.subtitle,
-          style: const TextStyle(
-            fontSize: 15,
-            color: AppColors.textSecondary,
-            height: 1.6,
+        const SizedBox(height: 20),
+
+        if (page.subtitle != null)
+          Text(
+            page.subtitle!,
+            style: const TextStyle(
+              fontSize: 15,
+              color: AppColors.textSecondary,
+              height: 1.6,
+            ),
+          ),
+
+        if (page.features.isNotEmpty)
+          ...page.features.map((f) => _FeatureTile(feature: f)),
+      ],
+    ),
+  );
+}
+
+// ── Bloc feature (page 2) ─────────────────────────────────────
+class _FeatureTile extends StatelessWidget {
+  final _Feature feature;
+  const _FeatureTile({required this.feature});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 18),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 40, height: 40,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(feature.icon, size: 20, color: AppColors.primary),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(feature.title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary)),
+              const SizedBox(height: 3),
+              Text(feature.description,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                  height: 1.5)),
+            ],
           ),
         ),
       ],

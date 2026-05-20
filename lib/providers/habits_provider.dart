@@ -40,7 +40,8 @@ class HabitsNotifier extends StateNotifier<HabitsData> {
 
   void setStress(double v)      => state = state.copyWith(stress: v);
   void setSommeil(double v)     => state = state.copyWith(sommeil: v.clamp(0, 12));
-  void setHydratation(double v) => state = state.copyWith(hydratation: v.clamp(0, 10));
+  void setHydratation(double v) => state = state.copyWith(
+    hydratation: double.parse(v.clamp(0.0, 3.0).toStringAsFixed(1)));
   void toggleMedicaments()      => state = state.copyWith(medicaments: !state.medicaments);
   void toggleAlcool()           => state = state.copyWith(alcool: !state.alcool);
   void toggleSport()            => state = state.copyWith(sport: !state.sport);

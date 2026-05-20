@@ -65,6 +65,9 @@ dependencies:
   # Internationalisation
   intl: ^0.20.2
 
+  # TFLite (modèles locaux : détection + prévention)
+  tflite_flutter: ^0.10.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -72,3 +75,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/models/detection_model.tflite
+    - assets/models/prevention_model.tflite
+    - assets/models/scaler_prevention.json
+    - assets/models/scaler_detection.json
